@@ -192,9 +192,50 @@ class Find_and_fix_in_doc:
         if file_path:
             self.lb.insert(tk.END, file_path)
 
+    def __file_placed_drop_zone(self, e:str) -> None:
+        list_path = "".join(e.data.replace("{", "")).split("}")[:-1]
+        #Вводим пути в дроп бокс с форматированием
+        [self.lb.insert(tk.END, file) for file in list_path]
+        #Показываем пользователю какое название будет у файла
+        # self.input_name_file.delete(0, tk.END)  # Очистка поля ввода
+        # self.input_name_file.insert(0,  os.path.splitext(os.path.basename(list_path[-1]))[0]+"подбор"+".log")  # Вставка текста в поле ввода
 
-    def conduct_analysis(self):
+    def __res_file_name(self) -> str:
+        if self.self_file_name_var:
+            return self.input_name_file.get()+".txt"
         
+        return "Pвх-{0} Pвых-{1} ПрСп-{2}.txt".format(self.input_PIn.get(), 
+                                                    self.input_POt.get(), 
+                                                    self.input_bandwidth.get())
+  
+
+
+    def conduct_analysis(self, file_path:str,):
+        workbook = openpyxl.load_workbook(file_path)
+        self.logger.info("======================")
+        self.logger.info("Поиск тегов для замены в файле: "+file_path)
+        for sheet_name in workbook.sheetnames:
+            sheet = workbook[sheet_name]
+            i_row = 0
+
+            # Put your sheet in the loader
+
+            image_loader = SheetImageLoader(sheet)
+
+            for row in sheet.iter_rows(values_only=True):
+    
+                for i_cell in range(len(row)):
+                    cell = row[i_cell]
+
+                    index_change_cell = self.get_excel_column(i_cell+1)+str(i_row+1) #+1 так как 1 это А и в экселе нумерация с 1
+                    if cell is not None:
+                    # Проверяем наличие картинки в клетке, если её нет, дальше реализовываем логику работы с текстом
+                        if not (image_loader.image_in(index_change_cell)):
+                            list_word_in_cell = str(cell).split()
+
+                            print(list_word_in_cell)
+
+                i_row += 1
 
     def replacement_button_pressed(self) -> None:
         """Функция для поиска и исправления кириллицы 
@@ -212,7 +253,7 @@ class Find_and_fix_in_doc:
         self.update_status_worck("В работе.")
 
         for index in range(1, len(listbox_data)):
-            if os.path.splitext(listbox_data[index])[1] == '.docx' or os.path.splitext(listbox_data[index])[1] == '.doc' or  os.path.splitext(listbox_data[index])[1] == '.xlsx':
+            if os.path.splitext(listbox_data[index])[1] == '.xlsx':
                 self.processed_urls[listbox_data[index]] = 0
 
         if len(self.processed_urls) == 0:
@@ -222,23 +263,24 @@ class Find_and_fix_in_doc:
 
         for path_file, _ in self.processed_urls.items():
             if path_file.replace(" ", "") != "":
-                digital_tag_ID = self.input_field_ID_tag.get()
+                PIn = self.input_PIn.get()
+                POt = self.input_POt.get()
+                bandwidth = self.input_bandwidth.get()
 
-                if digital_tag_ID != "":
-                    worck_patch  = (os.path.splitext(path_file)[0].lstrip()+'_result'+os.path.splitext(path_file)[1])
-
+                if PIn != "" and POt!="" and bandwidth!="":
                     #Если не был создан файл логов, создаём его
                     if not filename_log:
-                        filename_log = os.path.splitext(path_file)[0]+'_log'+'.log'
+                        filename_log = self.__res_file_name()
                         logging.basicConfig(filename= filename_log, encoding='utf-8', level=logging.INFO)
 
 
-                    ###Место функции анализа
+                    #Запуск функции анализа
+                    self.conduct_analysis(os.path.normpath(path_file))
                     
                     #self.show_info_message("В файле {0} исправлено: {1} некорректных записей с кириллицей.".format(worck_patch,str(number_change),))
                     self.logger.info("")
                     self.logger.info("!-!-!-!-!-!-!-!-!-!-!-!-!-!-!-!-!-!-!-!-!-!-!-!-!-")
-                    self.logger.info("В файле {0} найдено и исправлено {1} тегов.".format(worck_patch))
+                    self.logger.info("В файле {0} найдено *** подходящих регуляторов.".format(path_file))
                     self.logger.info("!-!-!-!-!-!-!-!-!-!-!-!-!-!-!-!-!-!-!-!-!-!-!-!-!-")
                     self.logger.info("")
                 else:
@@ -247,9 +289,81 @@ class Find_and_fix_in_doc:
         # Закрытие логгера
         logging.shutdown()
         # Открытие файла в который записаны данные
-        print(worck_patch)
         subprocess.Popen(f'explorer "{os.path.normpath(os.path.dirname(path_file))}"')
         subprocess.Popen(["notepad.exe", filename_log])
+
+
+    def __core_render(self) -> None:
+        self.status_frame = ttk.Frame(self.root, style="TFrame")
+        self.status_frame.pack(fill=tk.X)
+        self.status_label = ttk.Label(self.status_frame, text="Ожидание работы", style="TLabel")
+        self.status_label.pack(pady=10)
+        
+        self.status_animation = itertools.cycle(["В работе.", "В работе..", "В работе..."])
+        self.update_status_worck("Ожидание работы")
+
+        self.frame = ttk.Frame(self.root, style="TFrame")
+        self.frame.pack(fill=tk.BOTH, expand=True)
+
+        self.__drop_zone_render()
+
+        self.in_data_frame = ttk.Frame(self.frame, style="TFrame")
+        self.in_data_frame.pack(side=tk.RIGHT,anchor="n")
+
+        self.__input_data_render()
+        self.__button_render()
+
+    def __drop_zone_render(self) -> None:
+        self.lb = tk.Listbox(self.frame, width=50, height=10)
+        self.lb.insert(1, "Перетащите xlsx таблицу с данными о регуляторах")
+        self.lb.configure(justify=tk.CENTER)
+        self.lb.drop_target_register(DND_FILES)
+        self.lb.dnd_bind('<<Drop>>', self.__file_placed_drop_zone)
+        self.lb.pack(fill=tk.BOTH, expand=True, side=tk.RIGHT)
+
+    def __input_data_render(self) -> None:
+        self.label_PIn = ttk.Label(self.in_data_frame, text="Входное давление - Рвх:", style="TLabel")
+        self.label_PIn.grid(row=0, column=0, pady=3)
+
+        self.input_PIn = ttk.Entry(self.in_data_frame)
+        self.input_PIn.grid(row=1, column=0,sticky="ew",padx=(10))
+
+        self.label_POt = ttk.Label(self.in_data_frame, text="Выходное давление - Рвых:", style="TLabel")
+        self.label_POt.grid(row=2, column=0, pady=3)
+
+        self.input_POt = ttk.Entry(self.in_data_frame)
+        self.input_POt.grid(row=3, column=0,sticky="ew",padx=(10))
+
+        self.label_bandwidth = ttk.Label(self.in_data_frame, text="Пропускная способность", style="TLabel")
+        self.label_bandwidth.grid(row=4, column=0, pady=3)
+
+        self.input_bandwidth = ttk.Entry(self.in_data_frame)
+        self.input_bandwidth.grid(row=5, column=0, pady=(0,10),sticky="ew",padx=(10))
+
+
+        self.label_name = ttk.Label(self.in_data_frame, text="Название файла:", style="TLabel")
+        self.label_name.grid(row=6, column=0, pady=(20,0))
+
+        self.self_file_name_var = tk.BooleanVar()
+        self.checkbox = ttk.Checkbutton(self.in_data_frame, text="Своё название результирующего файла", variable=self.self_file_name_var, style="TCheckbutton")
+        self.checkbox.grid(row=7, column=0, pady=(0,10),sticky="ew",padx=(10))
+
+        self.input_name_file = ttk.Entry(self.in_data_frame)
+        self.input_name_file.grid(row=8, column=0, pady=(0,10),sticky="ew",padx=(10))
+
+
+
+    def __button_render(self) -> None:
+        self.select_button = ttk.Button(self.in_data_frame, text="Подобрать регулятор", command=self.replacement_button_pressed, style="TButton")
+        self.select_button.grid(row=9, column=0, pady=5)
+
+        self.open_button = ttk.Button(self.in_data_frame, text="Открыть файл", command=self.open_file_dialog, style="TButton")
+        self.open_button.grid(row=10, column=0, pady=5)
+
+        self.remove_button = ttk.Button(self.in_data_frame, text="Удалить", command=self.remove_button_pressed, style="TButton")
+        self.remove_button.grid(row=11, column=0, pady=5)
+
+        
 
     def draw_window(self) -> None:
         """
@@ -262,7 +376,7 @@ class Find_and_fix_in_doc:
         отображается в метке, а анимация показывает, что операция выполняется.
         """
         self.root = TkinterDnD.Tk()
-        self.root.title("Замена кириллицы в тегах файлов формата doc и xlsx")
+        self.root.title("Программа подбора регулятора")
         self.root.geometry("800x600")
         try:
             self.root.iconbitmap("icon.ico")
@@ -282,55 +396,9 @@ class Find_and_fix_in_doc:
         style.map("TButton",
                   background=[("active", "#0056b3")],
                   foreground=[("active", "black")])
-        self.status_frame = ttk.Frame(self.root, style="TFrame")
-        self.status_frame.pack(fill=tk.X)
-        self.status_label = ttk.Label(self.status_frame, text="Ожидание работы", style="TLabel")
-        self.status_label.pack(pady=10)
-        frame = ttk.Frame(self.root, style="TFrame")
-        frame.pack(fill=tk.BOTH, expand=True)
-        self.lb = tk.Listbox(frame, width=50, height=10)
-        self.lb.insert(1, "Перетащите doc или docx файлы, которые нужно проверить и в которых нужно заменить кириллицу в тегах")
-        self.lb.configure(justify=tk.CENTER)
-        self.lb.drop_target_register(DND_FILES)
-        self.lb.dnd_bind('<<Drop>>', lambda e: [self.lb.insert(tk.END, file) for file in "".join(e.data.replace("{", "")).split("}")[:-1]])
-        self.lb.pack(fill=tk.BOTH, expand=True)
+        
+        self.__core_render()
 
-        def __label_frame() -> None:
-            global in_data_frame
-
-            in_data_frame = ttk.Frame(frame, style="TFrame")
-            in_data_frame.pack()
-
-            label_data_frame = ttk.Frame(in_data_frame, style="TFrame")
-            label_data_frame.pack()
-
-            label_num = ttk.Label(label_data_frame, text="Цифровой маркер тега:", style="TLabel")
-            label_num.pack(side=tk.LEFT)
-
-            label_pas = ttk.Label(label_data_frame, text=" "*90, style="TLabel")
-            label_pas.pack(side=tk.LEFT)
-            
-        __label_frame()
-
-        self.input_field_ID_tag = ttk.Entry(in_data_frame)
-        self.input_field_ID_tag.pack(side=tk.LEFT, padx=10)
-        checkbox_frame = ttk.Frame(in_data_frame, style="TFrame")
-        checkbox_frame.pack(side=tk.LEFT,pady=10)
-        self.search_combined_paragraphs_var = tk.BooleanVar()
-        self.search_combined_paragraphs_var.set(True)
-        checkbox = ttk.Checkbutton(checkbox_frame, text="Word: Поиск по объединенным параграфам\n(возможна потеря форматирования)", variable=self.search_combined_paragraphs_var, style="TCheckbutton")
-        checkbox.pack(side=tk.LEFT)
-
-        button_frame = ttk.Frame(frame, style="TFrame")
-        button_frame.pack(pady=10)
-        open_button = ttk.Button(button_frame, text="Открыть файл", command=self.open_file_dialog, style="TButton")
-        open_button.pack(side=tk.LEFT, padx=10)
-        button = ttk.Button(button_frame, text="Заменить", command=self.replacement_button_pressed, style="TButton")
-        button.pack(side=tk.LEFT, padx=10)
-        remove_button = ttk.Button(button_frame, text="Удалить", command=self.remove_button_pressed, style="TButton")
-        remove_button.pack(side=tk.LEFT, padx=10)
-        self.status_animation = itertools.cycle(["В работе.", "В работе..", "В работе..."])
-        self.update_status_worck("Ожидание работы")
         self.root.mainloop()
 
 if __name__ == "__main__":
