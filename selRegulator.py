@@ -70,24 +70,11 @@ from openpyxl_image_loader import SheetImageLoader
 from docx import Document
 
 
+class CustomFormatter(logging.Formatter):
+    def format(self, record):
+        return record.getMessage()
 class Find_and_fix_in_doc:
     def __init__(self):
-        # Настройка логгера для записи в файл
-        structlog.configure(
-            processors=[
-                structlog.stdlib.add_log_level,
-                structlog.stdlib.PositionalArgumentsFormatter(),
-                structlog.processors.StackInfoRenderer(),
-                structlog.processors.format_exc_info,
-                structlog.stdlib.ProcessorFormatter.wrap_for_formatter,
-            ],
-            logger_factory=structlog.stdlib.LoggerFactory(),
-            wrapper_class=structlog.stdlib.BoundLogger,
-            cache_logger_on_first_use=True,
-        )
-        structlog.stdlib.recreate_defaults(log_level=None)
-        self.logger = structlog.get_logger("Test_log")
-
         self.data = {}
 
     def get_excel_column(self, index:int) -> str:
@@ -167,6 +154,13 @@ class Find_and_fix_in_doc:
         self.status_text = status_text
         self.status_worck_cycle()
 
+    def is_int(self, value) -> bool:
+        try:
+            int(value)
+            return True
+        except ValueError:
+            return False
+
     def possible_copy(self, path_file:str, worck_patch:str) -> bool:
         """
         Проверяет возможность копирования файла из одного пути в другой. 
@@ -212,19 +206,20 @@ class Find_and_fix_in_doc:
                                                     self.input_bandwidth.get())
   
     def __logging_found_device(self, name_devace:str, saddle:str, found_bandwidth:int, need_bandwidth:int, defolt_bandwidth:str)-> None:
-        self.logger.info("======================")
-        self.logger.info("Регулятор: {}".format(name_devace))
-        self.logger.info("Седло: {}".format(saddle))
-        self.logger.info("Пропускная способность регулятора при выбранных параметрах: {}".format(found_bandwidth))
-        self.logger.info("Необходимая пропускная способность с учётом +20%: {}".format(need_bandwidth))
-        self.logger.info("Процент запаса пропускной спос. регулятора от необходимой пропускной способности ({}) составляет {:.2f}%".format(need_bandwidth,((found_bandwidth-need_bandwidth)/found_bandwidth)*100))
+        logging.info("======================")
+        logging.info("Регулятор: {}".format(name_devace))
+        logging.info("Седло: {}".format(saddle))
+        logging.info("Пропускная способность регулятора при выбранных параметрах: {}".format(found_bandwidth))
+        logging.info("Необходимая пропускная способность с учётом +20%: {}".format(need_bandwidth))
+        logging.info("Процент запаса пропускной спос. регулятора от необходимой пропускной способности ({}) составляет {:.2f}%".format(need_bandwidth,((found_bandwidth-need_bandwidth)/found_bandwidth)*100))
 
 
-    def conduct_analysis(self, file_path:str,) -> int:
+    def conduct_analysis(self, file_path:str,
+                         inlet_pressure:float, 
+                         output_pressure:float, 
+                         traffic_capacity:float) -> int:
         regulators_found = 0
         workbook = openpyxl.load_workbook(file_path)
-        self.logger.info("======================")
-        self.logger.info("Поиск регуляторов по следущим параметрам: Входное давление-{0} Выходное давление-{1} Пропускная способность-{2}".format(self.input_PIn.get(),self.input_POt.get(), self.input_bandwidth.get()))
         for sheet_name in workbook.sheetnames:
             sheet = workbook[sheet_name]
             i_row = 0
@@ -232,8 +227,6 @@ class Find_and_fix_in_doc:
             # Put your sheet in the loader
 
             image_loader = SheetImageLoader(sheet)
-
-            
 
             for row in sheet.iter_rows(values_only=True):
                 if i_row == 0:
@@ -258,7 +251,7 @@ class Find_and_fix_in_doc:
                         mb_diap_Paut = str(row[i_cell]).replace("\xa0", '').replace(" ", '').replace(",", '.').split("-")
                         if len(mb_diap_Paut) == 2:
                             #Если ячейка выходного давления является диапазоном
-                            if float(mb_diap_Paut[0]) > float(self.input_POt.get().replace(",", '.')) > float(mb_diap_Paut[1]):
+                            if float(mb_diap_Paut[0]) <= float(output_pressure) <= float(mb_diap_Paut[1]):
                                 row_scr_i=0
                                 for row_scr in sheet.iter_rows(values_only=True):
                                     if row_scr_i > 2:
@@ -266,22 +259,25 @@ class Find_and_fix_in_doc:
 
                                         #Если ячейка входного давления является диапазоном
                                         if len(mb_diap_Pain) == 2: 
-                                            if  float(mb_diap_Pain[0]) > float(self.input_PIn.get().replace(",", '.')) > float(mb_diap_Pain[1]):
+                                            if  float(mb_diap_Pain[0]) <= float(inlet_pressure) <= float(mb_diap_Pain[1]):
 
-                                                bandwidth = int(self.input_bandwidth.get())+(int(self.input_bandwidth.get())/100)*20
-                                                if int(row_scr[i_cell]) > bandwidth:
-                                                    regulators_found+=1
-                                                    self.__logging_found_device(name_devace, saddle, row_scr[i_cell], bandwidth, self.input_bandwidth.get())
+                                                bandwidth = int(traffic_capacity)+(int(traffic_capacity)/100)*20
+                                                #Проверяем можем ли мы перевести значение пропускной способности в число
+                                                if self.is_int(row_scr[i_cell]):
+                                                    if int(row_scr[i_cell]) >= bandwidth:
+                                                        regulators_found+=1
+                                                        self.__logging_found_device(name_devace, saddle, row_scr[i_cell], bandwidth, traffic_capacity)
 
                                         
                                         #Если ячейка входного давления НЕ является диапазоном
                                         else:
-                                            if  float(mb_diap_Pain[0]) == float(self.input_PIn.get().replace(",", '.')):
-                                                bandwidth = int(self.input_bandwidth.get())+(int(self.input_bandwidth.get())/100)*20
-
-                                                if int(row_scr[i_cell]) > bandwidth:
-                                                    regulators_found+=1
-                                                    self.__logging_found_device(name_devace, saddle, row_scr[i_cell], bandwidth, self.input_bandwidth.get())
+                                            if  float(mb_diap_Pain[0]) == float(inlet_pressure):
+                                                bandwidth = int(traffic_capacity)+(int(traffic_capacity)/100)*20
+                                                #Проверяем можем ли мы перевести значение пропускной способности в число
+                                                if self.is_int(row_scr[i_cell]):
+                                                    if int(row_scr[i_cell]) >= bandwidth:
+                                                        regulators_found+=1
+                                                        self.__logging_found_device(name_devace, saddle, row_scr[i_cell], bandwidth, traffic_capacity)
 
 
 
@@ -289,7 +285,7 @@ class Find_and_fix_in_doc:
 
                         #Если ячейка выходного давления НЕ является диапазоном
                         else:
-                            if float(self.input_POt.get().replace(",", '.')) == float(mb_diap_Paut[0]):
+                            if float(output_pressure) == float(mb_diap_Paut[0]):
                                 row_scr_i=0
                                 for row_scr in sheet.iter_rows(values_only=True):
                                     if row_scr_i > 2:
@@ -297,20 +293,24 @@ class Find_and_fix_in_doc:
 
                                         #Если ячейка входного давления является диапазоном
                                         if len(mb_diap_Pain) == 2: 
-                                            if  float(mb_diap_Pain[0]) > float(self.input_PIn.get().replace(",", '.')) > float(mb_diap_Pain[1]):
-                                                bandwidth = int(self.input_bandwidth.get())+(int(self.input_bandwidth.get())/100)*20
-
-                                                if int(row_scr[i_cell]) > bandwidth:
-                                                    regulators_found+=1
-                                                    self.__logging_found_device(name_devace, saddle, row_scr[i_cell], bandwidth, self.input_bandwidth.get())
+                                            if  float(mb_diap_Pain[0]) <= float(inlet_pressure) <= float(mb_diap_Pain[1]):
+                                                bandwidth = int(self.traffic_capacity)+(int(self.traffic_capacity)/100)*20
+                                                #Проверяем можем ли мы перевести значение пропускной способности в число
+                                                if self.is_int(row_scr[i_cell]):
+                                                    if int(row_scr[i_cell]) >= bandwidth:
+                                                        regulators_found+=1
+                                                        self.__logging_found_device(name_devace, saddle, row_scr[i_cell], bandwidth, traffic_capacity)
                                         
                                         #Если ячейка входного давления НЕ является диапазоном
                                         else:
-                                            if  float(mb_diap_Pain[0]) == float(self.input_PIn.get().replace(",", '.')):
-                                                bandwidth = int(self.input_bandwidth.get())+(int(self.input_bandwidth.get())/100)*20
-                                                if int(row_scr[i_cell]) > bandwidth:
-                                                    regulators_found+=1
-                                                    self.__logging_found_device(name_devace, saddle, row_scr[i_cell], bandwidth, self.input_bandwidth.get())
+                                            if  float(mb_diap_Pain[0]) == float(inlet_pressure):
+                                                bandwidth = int(traffic_capacity)+(int(traffic_capacity)/100)*20
+                                                #Проверяем можем ли мы перевести значение пропускной способности в число
+                                                if self.is_int(row_scr[i_cell]):
+                                                    #Если это значение больше или равно необходимого
+                                                    if int(row_scr[i_cell]) >= bandwidth:
+                                                        regulators_found+=1
+                                                        self.__logging_found_device(name_devace, saddle, row_scr[i_cell], bandwidth, traffic_capacity)
                                         
                                     row_scr_i+=1
 
@@ -319,8 +319,6 @@ class Find_and_fix_in_doc:
                         
                         
                         row[i_cell]
-
-
 
                     cell = row[i_cell]
 
@@ -349,8 +347,6 @@ class Find_and_fix_in_doc:
         filename_log = False
         listbox_data = self.lb.get(0, tk.END)
         self.processed_urls = {}
-        self.status_text = "В работе"
-        self.update_status_worck("В работе.")
 
         for index in range(1, len(listbox_data)):
             if os.path.splitext(listbox_data[index])[1] == '.xlsx':
@@ -358,33 +354,66 @@ class Find_and_fix_in_doc:
 
         if len(self.processed_urls) == 0:
             self.show_error_message("Добавьте файлы xlsx")
-
-        self.show_info_message(str("Поиск подходящего регулятора запущено"))
+            return
 
         for path_file, _ in self.processed_urls.items():
             if path_file.replace(" ", "") != "":
-                PIn = self.input_PIn.get()
-                POt = self.input_POt.get()
-                bandwidth = self.input_bandwidth.get()
+
+                try:
+                    PIn = float(self.input_PIn.get().replace(",", '.').replace(" ", ''))
+                    POt = float(self.input_POt.get().replace(",", '.').replace(" ", ''))
+                    bandwidth = float(self.input_bandwidth.get().replace(",", '.'.replace(" ", '')))
+                except:
+                    self.show_error_message("Введите корректные значения для поиска регулятора")
+                    return 
+
+                self.show_info_message(str("Поиск подходящего регулятора запущен"))
+                self.status_text = "В работе"
+                self.update_status_worck("В работе.")
 
                 if PIn != "" and POt!="" and bandwidth!="":
+
+
                     #Если не был создан файл логов, создаём его
                     if not filename_log:
                         filename_log = self.__res_file_name()
-                        logging.basicConfig(filename= filename_log, encoding='utf-8', level=logging.INFO)
+                        logging.basicConfig(filename=filename_log, level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
+
 
 
                     #Запуск функции анализа
-                    regulators_found += self.conduct_analysis(os.path.normpath(path_file))
-                    
+                    logging.info("======================")
+                    logging.info("Поиск регуляторов по следущим параметрам: Входное давление-{0} Выходное давление-{1} Пропускная способность-{2}".format(self.input_PIn.get(),self.input_POt.get(), self.input_bandwidth.get()))
+                    regulators_found += self.conduct_analysis(os.path.normpath(path_file), 
+                                                              PIn,
+                                                              POt, 
+                                                              bandwidth)
+
+                    if regulators_found == 0:
+                        logging.info("Точного совпадения не найдено")
+                        loggingr.info("Попытка найти регулятор с меньшим выходным давлением.")
+                        for i in range(int(POt)*1000):
+                            POt-=0.0001
+                            #Запуск функции анализа
+                            regulators_found += self.conduct_analysis(os.path.normpath(path_file), 
+                                                              PIn,
+                                                              POt, 
+                                                              bandwidth)
+                            if regulators_found!=0:
+                                logging.info("Выполнен поиск и найдены регуляторы по входному: {0} и выходному {1} давлению.".format(PIn,POt))
+                                logging.info("")
+                                break
+                    if regulators_found == 0:
+                        logging.info("Регуляторы с необходимыми параметрами не найдены.")
+
                     #self.show_info_message("В файле {0} исправлено: {1} некорректных записей с кириллицей.".format(worck_patch,str(number_change),))
-                    self.logger.info("")
-                    self.logger.info("!-!-!-!-!-!-!-!-!-!-!-!-!-!-!-!-!-!-!-!-!-!-!-!-!-")
-                    self.logger.info("В файле {0} найдено {1} подходящих регуляторов.".format(path_file,regulators_found))
-                    self.logger.info("!-!-!-!-!-!-!-!-!-!-!-!-!-!-!-!-!-!-!-!-!-!-!-!-!-")
-                    self.logger.info("")
+                    logging.info("")
+                    logging.info("!-!-!-!-!-!-!-!-!-!-!-!-!-!-!-!-!-!-!-!-!-!-!-!-!-")
+                    logging.info("В файле {0} найдено {1} подходящих регуляторов.".format(path_file,regulators_found))
+                    logging.info("!-!-!-!-!-!-!-!-!-!-!-!-!-!-!-!-!-!-!-!-!-!-!-!-!-")
+                    logging.info("")
                 else:
-                    self.show_error_message("Введите маркер тега!")
+                    self.show_error_message("Введите все входные данные!")
 
         # Закрытие логгера
         logging.shutdown()
