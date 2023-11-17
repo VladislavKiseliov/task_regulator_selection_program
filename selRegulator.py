@@ -61,6 +61,7 @@ import itertools
 import structlog
 import logging.config
 import subprocess
+import re
 
 from tkinter import messagebox, filedialog
 from tkinterdnd2 import DND_FILES, TkinterDnD
@@ -86,6 +87,8 @@ class Find_and_fix_in_doc:
         )
         structlog.stdlib.recreate_defaults(log_level=None)
         self.logger = structlog.get_logger("Test_log")
+
+        self.data = {}
 
     def get_excel_column(self, index:int) -> str:
         """
@@ -184,7 +187,7 @@ class Find_and_fix_in_doc:
             self.show_error_message("Недоступно чтение исходного файла!")
             return False
 
-    def open_file_dialog(self) -> None:
+    def __open_file_dialog(self) -> None:
         file_path = filedialog.askopenfilename(filetypes=[("All Files", "*"),
                                                         ("Excel Files", "*.xlsx"),
                                                           ("Doc Files",  "*.doc", ),
@@ -201,7 +204,7 @@ class Find_and_fix_in_doc:
         # self.input_name_file.insert(0,  os.path.splitext(os.path.basename(list_path[-1]))[0]+"подбор"+".log")  # Вставка текста в поле ввода
 
     def __res_file_name(self) -> str:
-        if self.self_file_name_var:
+        if self.self_file_name_var.get():
             return self.input_name_file.get()+".txt"
         
         return "Pвх-{0} Pвых-{1} ПрСп-{2}.txt".format(self.input_PIn.get(), 
@@ -222,20 +225,50 @@ class Find_and_fix_in_doc:
 
             image_loader = SheetImageLoader(sheet)
 
+            
+
             for row in sheet.iter_rows(values_only=True):
-    
+                if i_row == 0:
+                    name_devace = row[0]
+                    if name_devace not in self.data:
+                        self.data[name_devace] = {}
+
+                    saddle = row[1]
+                    self.data[name_devace][saddle]={}
+
+                    print(name_devace, saddle)
+                if i_row == 1:
+                    unit_Pin = row[0]
+                    unit_Out = row[1]
+
+                    self.data[name_devace][saddle]['unit_Pin'] = unit_Pin
+                    self.data[name_devace][saddle]['unit_Out'] = unit_Out
+                    self.data[name_devace][saddle]['data_P'] = {}
+
                 for i_cell in range(len(row)):
+                    if i_row == 2 and i_cell!=0:
+                        self.data[name_devace][saddle]['data_P'][str(row[i_cell]).replace("\xa0", '').replace(" ", '')] = {}
+                    if i_row>2 and i_cell !=0 :
+                        
+
+                        
+                        row[i_cell]
+
+
+
                     cell = row[i_cell]
 
                     index_change_cell = self.get_excel_column(i_cell+1)+str(i_row+1) #+1 так как 1 это А и в экселе нумерация с 1
                     if cell is not None:
                     # Проверяем наличие картинки в клетке, если её нет, дальше реализовываем логику работы с текстом
                         if not (image_loader.image_in(index_change_cell)):
-                            list_word_in_cell = str(cell).split()
+                            #Разделение строки по нескольким символам
+                            list_word_in_cell = re.split(" |-", str(cell)) 
 
                             print(list_word_in_cell)
 
                 i_row += 1
+            print(self.data)
 
     def replacement_button_pressed(self) -> None:
         """Функция для поиска и исправления кириллицы 
@@ -357,7 +390,7 @@ class Find_and_fix_in_doc:
         self.select_button = ttk.Button(self.in_data_frame, text="Подобрать регулятор", command=self.replacement_button_pressed, style="TButton")
         self.select_button.grid(row=9, column=0, pady=5)
 
-        self.open_button = ttk.Button(self.in_data_frame, text="Открыть файл", command=self.open_file_dialog, style="TButton")
+        self.open_button = ttk.Button(self.in_data_frame, text="Открыть файл", command=self.__open_file_dialog, style="TButton")
         self.open_button.grid(row=10, column=0, pady=5)
 
         self.remove_button = ttk.Button(self.in_data_frame, text="Удалить", command=self.remove_button_pressed, style="TButton")
