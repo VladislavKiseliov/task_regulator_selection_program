@@ -1,5 +1,5 @@
 """
-Данный код представляет собой программу, которая выполняет замену кириллических символов в тегах docx файлов на латинские символы.  
+Данный код представляет собой программу, которая выполняет подбор подходящего регулятора по 3 параметрам из файла exel.  
  
 Шаги выполнения кода: 
 1. Импортируются необходимые модули и библиотеки. 
@@ -98,6 +98,24 @@ class Find_and_fix_in_doc:
             column = chr(index % 26 + 65) + column
             index //= 26
         return column
+
+    def __split_and_insert_newline(self, text):
+        words = text.split()  # Разделение строки на список слов
+        result = text
+        if len(words) > 5:
+            half_length = len(words) // 2
+            first_half = ' '.join(words[:half_length])  # Объединение слов до середины
+            second_half = ' '.join(words[half_length:])  # Объединение слов после середины
+            result = f"{first_half}\n{second_half}"
+        return result
+
+    def __write_log_wrapper(self, mess:str) ->None:
+        self.text_widget_res.config(state=tk.NORMAL)  # Установка состояния виджета в NORMAL
+        self.text_widget_res.insert(tk.END, "\n"+self.__split_and_insert_newline(mess))
+        self.text_widget_res.config(state=tk.DISABLED)  # Возвращение состояния виджета
+
+        self.logger.write_log(mess)
+        self.root.update()
 
     def show_error_message(self, text_err:str) -> None:
         """Функция show_error_message выводит сообщение об ошибке с заданным текстом
@@ -203,12 +221,12 @@ class Find_and_fix_in_doc:
                                                     self.input_bandwidth.get())
   
     def __logging_found_device(self, name_devace:str, saddle:str, found_bandwidth:int, need_bandwidth:int, defolt_bandwidth:str)-> None:
-        self.logger.write_log("======================")
-        self.logger.write_log("Регулятор: {}".format(name_devace))
-        self.logger.write_log("Седло: {}".format(saddle))
-        self.logger.write_log("Пропускная способность регулятора при выбранных параметрах: {}".format(found_bandwidth))
-        self.logger.write_log("Необходимая пропускная способность с учётом +20%: {}".format(need_bandwidth))
-        self.logger.write_log("Процент запаса пропускной спос. регулятора от необходимой пропускной способности ({}) составляет {:.2f}%".format(need_bandwidth,((found_bandwidth-need_bandwidth)/found_bandwidth)*100))
+        self.__write_log_wrapper("======================")
+        self.__write_log_wrapper("Регулятор: {}".format(name_devace))
+        self.__write_log_wrapper("Седло: {}".format(saddle))
+        self.__write_log_wrapper("Пропускная способность регулятора при выбранных параметрах: {}".format(found_bandwidth))
+        self.__write_log_wrapper("Необходимая пропускная способность с учётом +20%: {}".format(need_bandwidth))
+        self.__write_log_wrapper("Процент запаса пропускной спос. регулятора от необходимой пропускной способности ({}) составляет {:.2f}%".format(need_bandwidth,((found_bandwidth-need_bandwidth)/found_bandwidth)*100))
 
 
     def conduct_analysis(self, file_path:str,
@@ -364,7 +382,7 @@ class Find_and_fix_in_doc:
                     self.show_error_message("Введите корректные значения для поиска регулятора")
                     return 
 
-                self.show_info_message(str("Поиск подходящего регулятора запущен"))
+                #self.show_info_message(str("Поиск подходящего регулятора запущен"))
                 self.status_text = "В работе"
                 self.update_status_worck("В работе.")
 
@@ -380,16 +398,16 @@ class Find_and_fix_in_doc:
 
 
                     #Запуск функции анализа
-                    self.logger.write_log("======================")
-                    self.logger.write_log("Поиск регуляторов по следущим параметрам: Входное давление-{0} Выходное давление-{1} Пропускная способность-{2}".format(self.input_PIn.get(),self.input_POt.get(), self.input_bandwidth.get()))
+                    self.__write_log_wrapper("======================")
+                    self.__write_log_wrapper("Поиск регуляторов по следущим параметрам: Входное давление-{0} Выходное давление-{1} Пропускная способность-{2}".format(self.input_PIn.get(),self.input_POt.get(), self.input_bandwidth.get()))
                     regulators_found += self.conduct_analysis(os.path.normpath(path_file), 
                                                               PIn,
                                                               POt, 
                                                               bandwidth)
 
                     if regulators_found == 0:
-                        self.logger.write_log("Точного совпадения не найдено")
-                        self.logger.write_log("Попытка найти регулятор с меньшим выходным давлением.")
+                        self.__write_log_wrapper("Точного совпадения не найдено")
+                        self.__write_log_wrapper("Попытка найти регулятор с меньшим выходным давлением.")
                         for i in range(int(POt)*1000):
                             POt-=0.0001
                             #Запуск функции анализа
@@ -398,23 +416,23 @@ class Find_and_fix_in_doc:
                                                               POt, 
                                                               bandwidth)
                             if regulators_found!=0:
-                                self.logger.write_log("Выполнен поиск и найдены регуляторы по входному: {0} и выходному {1} давлению.".format(PIn,POt))
-                                self.logger.write_log("")
+                                self.__write_log_wrapper("Выполнен поиск и найдены регуляторы по входному: {0} и выходному {1} давлению.".format(PIn,POt))
+                                self.__write_log_wrapper("")
                                 break
                     if regulators_found == 0:
-                        self.logger.write_log("Регуляторы с необходимыми параметрами не найдены.")
+                        self.__write_log_wrapper("Регуляторы с необходимыми параметрами не найдены.")
 
                     #self.show_info_message("В файле {0} исправлено: {1} некорректных записей с кириллицей.".format(worck_patch,str(number_change),))
-                    self.logger.write_log("")
-                    self.logger.write_log("!-!-!-!-!-!-!-!-!-!-!-!-!-!-!-!-!-!-!-!-!-!-!-!-!-")
-                    self.logger.write_log("В файле {0} найдено {1} подходящих регуляторов.".format(path_file,regulators_found))
-                    self.logger.write_log("!-!-!-!-!-!-!-!-!-!-!-!-!-!-!-!-!-!-!-!-!-!-!-!-!-")
-                    self.logger.write_log("")
+                    self.__write_log_wrapper("!-!-!-!-!-!-!-!-!-!-!-!-!-!-!-!-!-!-!-!-!-!-!-!-!-")
+                    self.__write_log_wrapper("В файле {0} найдено {1} подходящих регуляторов.".format(path_file,regulators_found))
+                    self.__write_log_wrapper("!-!-!-!-!-!-!-!-!-!-!-!-!-!-!-!-!-!-!-!-!-!-!-!-!-")
                 else:
                     self.show_error_message("Введите все входные данные!")
 
         # Закрытие логгера
         self.logger.close_file()
+
+        self.update_status_worck("Ожидание работы")
         # Открытие файла в который записаны данные
         subprocess.Popen(f'explorer "{os.path.normpath(os.path.dirname(path_file))}"')
         subprocess.Popen(["notepad.exe", filename_log])
@@ -422,7 +440,7 @@ class Find_and_fix_in_doc:
 
     def __core_render(self) -> None:
         self.status_frame = ttk.Frame(self.root, style="TFrame")
-        self.status_frame.pack(fill=tk.X)
+        self.status_frame.pack(fill=tk.X, side=tk.TOP)
         self.status_label = ttk.Label(self.status_frame, text="Ожидание работы", style="TLabel")
         self.status_label.pack(pady=10)
         
@@ -430,23 +448,80 @@ class Find_and_fix_in_doc:
         self.update_status_worck("Ожидание работы")
 
         self.frame = ttk.Frame(self.root, style="TFrame")
-        self.frame.pack(fill=tk.BOTH, expand=True)
+        self.frame.pack(fill=tk.BOTH, expand=True, side=tk.RIGHT)
 
+        self.__create_menu()
         self.__drop_zone_render()
 
-        self.in_data_frame = ttk.Frame(self.frame, style="TFrame")
-        self.in_data_frame.pack(side=tk.RIGHT,anchor="n")
+        self.in_data_frame = ttk.Frame(self.root, style="TFrame")
+        self.in_data_frame.pack(side=tk.RIGHT,anchor="n", expand=True)
 
         self.__input_data_render()
         self.__button_render()
 
+    def __create_menu(self):
+        self.menubar = tk.Menu(self.root)
+        self.root.config(menu=self.menubar)
+
+        self.file_menu = tk.Menu(self.menubar, tearoff=0)
+        self.file_menu.add_command(label="Открыть", command=self.open_file)
+        self.file_menu.add_separator()
+        self.file_menu.add_command(label="Выход", command=self.root.quit)
+
+        self.help_menu = tk.Menu(self.menubar, tearoff=0)
+        self.help_menu.add_command(label="О программе", command=self.show_about)
+
+        self.menubar.add_cascade(label="Файл", menu=self.file_menu)
+        self.menubar.add_cascade(label="Помощь", menu=self.help_menu)
+
+    def open_file(self):
+        self.__open_file_dialog()
+        # Логика открытия файла
+        pass
+
+
+    def show_about(self):
+        # Логика отображения информации о программе
+        about_window = tk.Toplevel(self.root)
+        about_window.title("О программе")
+        about_window.geometry("800x600")
+        try:
+            about_window.iconbitmap("icon.ico")
+        except:
+            pass
+        self.style.configure("Custom.TLabel", font=("Times New Roman", 12), background="white")
+        
+        text_widget = tk.Text(about_window, height=30, width=95)
+        text_widget.pack()
+
+        text="Программа подбора регулятора принимает 3 входных параметра: входное давление,\nвыходное давление в МПа и пропускную способность. Для поиска регулятора\nнеобходимо добавить файл в формате xlsx содержащий следующую структуру и данные:\nКаждая новая таблица на отдельном листе. \nЯчейка A1-название регулятора.\nЯчейка В1 седло регулятора. \nА2 размерность выходного давление.\nВ2 размерность выходного давления.\nА4-Аn единицы выходного давления.\nВ3-(N)3 единицы выходного давления.\nЭтапы работы с программой:\n1)Ввести параметры необходимого регулятора.\nЕсли нужно своё название файла результата анализа, \nпоставить флажок 'Своё название результирующего файла' и ввести необходимое название. \n2)Перетащить таблицу формата xlsx с данными о регуляторах в дроп-зону. \nЛибо используя кнопку 'Открыть файл'.\n3)Нажать кнопку 'Подобрать регулятор'.\n4)После того как программа завершить работу, откроется файл с проведённым анализом."
+
+        text_widget.insert(tk.END, text)
+        text_widget.config(state=tk.DISABLED)
+
+        text_widget.pack(pady=20)
+
+        close_button = ttk.Button(about_window, text="Закрыть", command=about_window.destroy)
+        close_button.pack()
+
+
     def __drop_zone_render(self) -> None:
-        self.lb = tk.Listbox(self.frame, width=50, height=10)
+        self.lb = tk.Listbox(self.frame, width=30, height=10)
         self.lb.insert(1, "Перетащите xlsx таблицу с данными о регуляторах")
         self.lb.configure(justify=tk.CENTER)
         self.lb.drop_target_register(DND_FILES)
         self.lb.dnd_bind('<<Drop>>', self.__file_placed_drop_zone)
-        self.lb.pack(fill=tk.BOTH, expand=True, side=tk.RIGHT)
+        self.lb.pack(fill=tk.BOTH, expand=True, side=tk.TOP)
+
+        self.text_widget_res = tk.Text(self.frame, height=30, width=67)
+        self.text_widget_res.pack()
+
+        text="Ожидание начала подбора..."
+
+        self.text_widget_res.insert(tk.END, text)
+        self.text_widget_res.config(state=tk.DISABLED)
+
+        self.text_widget_res.pack(fill=tk.BOTH, expand=True, side=tk.BOTTOM)
 
     def __input_data_render(self) -> None:
         self.label_PIn = ttk.Label(self.in_data_frame, text="Входное давление - Рвх МПа:", style="TLabel")
@@ -509,10 +584,10 @@ class Find_and_fix_in_doc:
             self.root.iconbitmap("icon.ico")
         except:
             pass
-        style = ttk.Style()
-        style.configure("TFrame", background="lightgrey")
-        style.configure("TLabel", background="lightgrey")
-        style.configure("TButton",
+        self.style = ttk.Style()
+        self.style.configure("TFrame", background="lightgrey")
+        self.style.configure("TLabel", background="lightgrey")
+        self.style.configure("TButton",
                         background="#007bff",
                         foreground="black",
                         relief=tk.FLAT,
@@ -520,7 +595,7 @@ class Find_and_fix_in_doc:
                         padding=10,
                         width=20,
                         borderwidth=0)
-        style.map("TButton",
+        self.style.map("TButton",
                   background=[("active", "#0056b3")],
                   foreground=[("active", "black")])
         

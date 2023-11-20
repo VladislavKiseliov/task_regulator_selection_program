@@ -1,2 +1,4 @@
 build
 dist
+selRegulator.spec
+__pycache__
