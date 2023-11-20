@@ -63,16 +63,13 @@ import logging.config
 import subprocess
 import re
 
+from MyLogger import *
 from tkinter import messagebox, filedialog
 from tkinterdnd2 import DND_FILES, TkinterDnD
 from openpyxl.styles import PatternFill	
 from openpyxl_image_loader import SheetImageLoader
 from docx import Document
 
-
-class CustomFormatter(logging.Formatter):
-    def format(self, record):
-        return record.getMessage()
 class Find_and_fix_in_doc:
     def __init__(self):
         self.data = {}
@@ -206,12 +203,12 @@ class Find_and_fix_in_doc:
                                                     self.input_bandwidth.get())
   
     def __logging_found_device(self, name_devace:str, saddle:str, found_bandwidth:int, need_bandwidth:int, defolt_bandwidth:str)-> None:
-        logging.info("======================")
-        logging.info("Регулятор: {}".format(name_devace))
-        logging.info("Седло: {}".format(saddle))
-        logging.info("Пропускная способность регулятора при выбранных параметрах: {}".format(found_bandwidth))
-        logging.info("Необходимая пропускная способность с учётом +20%: {}".format(need_bandwidth))
-        logging.info("Процент запаса пропускной спос. регулятора от необходимой пропускной способности ({}) составляет {:.2f}%".format(need_bandwidth,((found_bandwidth-need_bandwidth)/found_bandwidth)*100))
+        self.logger.write_log("======================")
+        self.logger.write_log("Регулятор: {}".format(name_devace))
+        self.logger.write_log("Седло: {}".format(saddle))
+        self.logger.write_log("Пропускная способность регулятора при выбранных параметрах: {}".format(found_bandwidth))
+        self.logger.write_log("Необходимая пропускная способность с учётом +20%: {}".format(need_bandwidth))
+        self.logger.write_log("Процент запаса пропускной спос. регулятора от необходимой пропускной способности ({}) составляет {:.2f}%".format(need_bandwidth,((found_bandwidth-need_bandwidth)/found_bandwidth)*100))
 
 
     def conduct_analysis(self, file_path:str,
@@ -377,21 +374,22 @@ class Find_and_fix_in_doc:
                     #Если не был создан файл логов, создаём его
                     if not filename_log:
                         filename_log = self.__res_file_name()
-                        logging.basicConfig(filename=filename_log, level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
+                        self.logger = FileWriter(filename_log)
+                        self.logger.open_file()
 
 
 
                     #Запуск функции анализа
-                    logging.info("======================")
-                    logging.info("Поиск регуляторов по следущим параметрам: Входное давление-{0} Выходное давление-{1} Пропускная способность-{2}".format(self.input_PIn.get(),self.input_POt.get(), self.input_bandwidth.get()))
+                    self.logger.write_log("======================")
+                    self.logger.write_log("Поиск регуляторов по следущим параметрам: Входное давление-{0} Выходное давление-{1} Пропускная способность-{2}".format(self.input_PIn.get(),self.input_POt.get(), self.input_bandwidth.get()))
                     regulators_found += self.conduct_analysis(os.path.normpath(path_file), 
                                                               PIn,
                                                               POt, 
                                                               bandwidth)
 
                     if regulators_found == 0:
-                        logging.info("Точного совпадения не найдено")
-                        loggingr.info("Попытка найти регулятор с меньшим выходным давлением.")
+                        self.logger.write_log("Точного совпадения не найдено")
+                        self.logger.write_log("Попытка найти регулятор с меньшим выходным давлением.")
                         for i in range(int(POt)*1000):
                             POt-=0.0001
                             #Запуск функции анализа
@@ -400,23 +398,23 @@ class Find_and_fix_in_doc:
                                                               POt, 
                                                               bandwidth)
                             if regulators_found!=0:
-                                logging.info("Выполнен поиск и найдены регуляторы по входному: {0} и выходному {1} давлению.".format(PIn,POt))
-                                logging.info("")
+                                self.logger.write_log("Выполнен поиск и найдены регуляторы по входному: {0} и выходному {1} давлению.".format(PIn,POt))
+                                self.logger.write_log("")
                                 break
                     if regulators_found == 0:
-                        logging.info("Регуляторы с необходимыми параметрами не найдены.")
+                        self.logger.write_log("Регуляторы с необходимыми параметрами не найдены.")
 
                     #self.show_info_message("В файле {0} исправлено: {1} некорректных записей с кириллицей.".format(worck_patch,str(number_change),))
-                    logging.info("")
-                    logging.info("!-!-!-!-!-!-!-!-!-!-!-!-!-!-!-!-!-!-!-!-!-!-!-!-!-")
-                    logging.info("В файле {0} найдено {1} подходящих регуляторов.".format(path_file,regulators_found))
-                    logging.info("!-!-!-!-!-!-!-!-!-!-!-!-!-!-!-!-!-!-!-!-!-!-!-!-!-")
-                    logging.info("")
+                    self.logger.write_log("")
+                    self.logger.write_log("!-!-!-!-!-!-!-!-!-!-!-!-!-!-!-!-!-!-!-!-!-!-!-!-!-")
+                    self.logger.write_log("В файле {0} найдено {1} подходящих регуляторов.".format(path_file,regulators_found))
+                    self.logger.write_log("!-!-!-!-!-!-!-!-!-!-!-!-!-!-!-!-!-!-!-!-!-!-!-!-!-")
+                    self.logger.write_log("")
                 else:
                     self.show_error_message("Введите все входные данные!")
 
         # Закрытие логгера
-        logging.shutdown()
+        self.logger.close_file()
         # Открытие файла в который записаны данные
         subprocess.Popen(f'explorer "{os.path.normpath(os.path.dirname(path_file))}"')
         subprocess.Popen(["notepad.exe", filename_log])
@@ -451,13 +449,13 @@ class Find_and_fix_in_doc:
         self.lb.pack(fill=tk.BOTH, expand=True, side=tk.RIGHT)
 
     def __input_data_render(self) -> None:
-        self.label_PIn = ttk.Label(self.in_data_frame, text="Входное давление - Рвх:", style="TLabel")
+        self.label_PIn = ttk.Label(self.in_data_frame, text="Входное давление - Рвх МПа:", style="TLabel")
         self.label_PIn.grid(row=0, column=0, pady=3)
 
         self.input_PIn = ttk.Entry(self.in_data_frame)
         self.input_PIn.grid(row=1, column=0,sticky="ew",padx=(10))
 
-        self.label_POt = ttk.Label(self.in_data_frame, text="Выходное давление - Рвых:", style="TLabel")
+        self.label_POt = ttk.Label(self.in_data_frame, text="Выходное давление - Рвых МПа:", style="TLabel")
         self.label_POt.grid(row=2, column=0, pady=3)
 
         self.input_POt = ttk.Entry(self.in_data_frame)
