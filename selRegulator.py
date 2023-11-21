@@ -49,7 +49,7 @@ class SheetImageLoader:
 Для сборки в exe 
 Добавить файл https://github.com/pmgagne/tkinterdnd2/blob/master/hook-tkinterdnd2.py в 
 папку откуда запускается pyinstaller. И запустить через команду:
-pyinstaller --windowed --onefile --icon=icon.ico uREcyrillic.py --additional-hooks-dir=.
+pyinstaller --windowed --onefile --icon=icon.ico selRegulator.py --additional-hooks-dir=.
 """
 
 import tkinter as tk
@@ -62,8 +62,10 @@ import structlog
 import logging.config
 import subprocess
 import re
+import math
 
 from MyLogger import *
+from decimal import Decimal
 from tkinter import messagebox, filedialog
 from tkinterdnd2 import DND_FILES, TkinterDnD
 from openpyxl.styles import PatternFill	
@@ -73,6 +75,8 @@ from docx import Document
 class Find_and_fix_in_doc:
     def __init__(self):
         self.data = {}
+        self.data_found = {}
+        self.data_found_id = 0
 
     def get_excel_column(self, index:int) -> str:
         """
@@ -221,12 +225,26 @@ class Find_and_fix_in_doc:
                                                     self.input_bandwidth.get())
   
     def __logging_found_device(self, name_devace:str, saddle:str, found_bandwidth:int, need_bandwidth:int, defolt_bandwidth:str)-> None:
-        self.__write_log_wrapper("======================")
-        self.__write_log_wrapper("Регулятор: {}".format(name_devace))
-        self.__write_log_wrapper("Седло: {}".format(saddle))
-        self.__write_log_wrapper("Пропускная способность регулятора при выбранных параметрах: {}".format(found_bandwidth))
-        self.__write_log_wrapper("Необходимая пропускная способность с учётом +20%: {}".format(need_bandwidth))
-        self.__write_log_wrapper("Процент запаса пропускной спос. регулятора от необходимой пропускной способности ({}) составляет {:.2f}%".format(need_bandwidth,((found_bandwidth-need_bandwidth)/found_bandwidth)*100))
+        self.data_found_id+=1
+        self.data_found[self.data_found_id] = {"Регулятор":name_devace,
+                                               "Седло":saddle,
+                                               "Пропускная":found_bandwidth,
+                                               "Необходимая":need_bandwidth,
+                                               "Процент":"{:.2f}".format(100-(((found_bandwidth-need_bandwidth)/found_bandwidth)*100))}
+        
+        
+
+    def write_log_found_reg(self) -> None:
+        sorted_data = sorted(self.data_found.items(), key=lambda x: float(x[1]["Процент"]), reverse=True)
+
+        for key, value in sorted_data:
+            self.__write_log_wrapper("======================")
+            self.__write_log_wrapper("Регулятор: {}".format(value["Регулятор"]))
+            self.__write_log_wrapper("Седло: {}".format(value["Седло"]))
+            self.__write_log_wrapper("Пропускная способность регулятора при выбранных параметрах: {}".format(value["Пропускная"]))
+            self.__write_log_wrapper("Необходимая пропускная способность с учётом +20%: {}".format(value["Необходимая"]))
+            self.__write_log_wrapper("Процент загрузки пропускной спос. регулятора c необходимой пропускной способностью ({}) составляет {}%".format(value["Необходимая"],value["Процент"]))
+        self.data_found = {}
 
 
     def conduct_analysis(self, file_path:str,
@@ -346,7 +364,6 @@ class Find_and_fix_in_doc:
 
 
                 i_row += 1
-            #print(self.data)
         return regulators_found
 
     def replacement_button_pressed(self) -> None:
@@ -406,21 +423,28 @@ class Find_and_fix_in_doc:
                                                               bandwidth)
 
                     if regulators_found == 0:
+                        step = Decimal('0.01')
+                        value = Decimal(math.ceil(POt * 100) / 100)
                         self.__write_log_wrapper("Точного совпадения не найдено")
-                        self.__write_log_wrapper("Попытка найти регулятор с меньшим выходным давлением.")
-                        for i in range(int(POt)*1000):
-                            POt-=0.0001
+                        self.__write_log_wrapper("Попытка найти регулятор с большим выходным давлением.")
+                        while value - Decimal("{:.4f}".format(POt))<10:
+                            value+=step
+                            value = Decimal("{:.4f}".format(value))
                             #Запуск функции анализа
                             regulators_found += self.conduct_analysis(os.path.normpath(path_file), 
                                                               PIn,
-                                                              POt, 
+                                                              value, 
                                                               bandwidth)
                             if regulators_found!=0:
-                                self.__write_log_wrapper("Выполнен поиск и найдены регуляторы по входному: {0} и выходному {1} давлению.".format(PIn,POt))
+                                self.__write_log_wrapper("======================")
+                                self.__write_log_wrapper("Выполнен поиск и найдены регуляторы по входному: {0} и выходному {1} давлению.".format(PIn,value))
                                 self.__write_log_wrapper("")
                                 break
+
                     if regulators_found == 0:
                         self.__write_log_wrapper("Регуляторы с необходимыми параметрами не найдены.")
+                    else:
+                        self.write_log_found_reg()
 
                     #self.show_info_message("В файле {0} исправлено: {1} некорректных записей с кириллицей.".format(worck_patch,str(number_change),))
                     self.__write_log_wrapper("!-!-!-!-!-!-!-!-!-!-!-!-!-!-!-!-!-!-!-!-!-!-!-!-!-")
@@ -434,8 +458,9 @@ class Find_and_fix_in_doc:
 
         self.update_status_worck("Ожидание работы")
         # Открытие файла в который записаны данные
-        subprocess.Popen(f'explorer "{os.path.normpath(os.path.dirname(path_file))}"')
         subprocess.Popen(["notepad.exe", filename_log])
+        subprocess.Popen(f'explorer "{os.path.normpath(os.path.dirname(path_file))}"')
+
 
 
     def __core_render(self) -> None:
