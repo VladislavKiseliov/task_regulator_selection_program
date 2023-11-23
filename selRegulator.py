@@ -1,25 +1,75 @@
 """
-Данный код представляет собой программу, которая выполняет подбор подходящего регулятора по 3 параметрам из файла exel.  
+# Документация для программы selRegulator 
  
-Шаги выполнения кода: 
-1. Импортируются необходимые модули и библиотеки. 
-2. Создается класс "Find_and_fix_in_doc". 
-3. В конструкторе класса настраивается логгер для записи в файл, инициализируются переменные и 
-создается словарь для хранения ссылок на файлы, которые нужно проверить. 
-4. В классе определены несколько методов:  
-   - "get_excel_column" - для получения буквенного обозначения столбца в Excel по его индексу. 
-   - "show_error_message" - для отображения окна с ошибкой. 
-   - "show_warning_message" - для отображения предупреждения. 
-   - "remove_button_pressed" - для обработки нажатия кнопки "Удалить" в окне программы. 
-   - "status_worck_cycle" - для отображения анимации статуса работы программы. 
-   - "update_status_worck" - для обновления статуса работы программы. 
-   - "possible_copy" - для копирования файла. 
-   - "replace_cyrillic_with_latin" - для замены кириллических символов на латинские в слове. 
-   - "read_and_fix_docx_file" - для чтения и исправления docx файла. 
-   - "replacement_button_pressed" - для обработки нажатия кнопки "Заменить" в окне программы. 
-   - "draw_window" - для отрисовки графического интерфейса программы. 
-5. В блоке "if __name__ == "__main__":" создается экземпляр класса "Find_and_fix_in_docx" 
-и вызывается метод "draw_window" для отображения окна программы.
+Программа  selRegulator  предназначена для помощи пользователям в выборе подходящих 
+регуляторов на основе заданных параметров и анализа данных в файлах Excel. 
+Она обеспечивает графический пользовательский интерфейс (GUI) для удобного 
+взаимодействия и использует различные библиотеки, такие как  tkinter ,  
+openpyxl ,  docx  и другие, для выполнения своих функций. 
+ 
+## Возможности 
+ 
+1. Функция перетаскивания файлов: 
+   - Пользователи могут перетаскивать файлы Excel (.xlsx) в программу для анализа. 
+ 
+2. Входные параметры: 
+   - Пользователи могут вводить следующие параметры для анализа: 
+     - Входное давление (PIn): давление на входе в МПа. 
+     - Выходное давление (POt): желаемое давление на выходе в МПа. 
+     - Пропускная способность: требуемая пропускная способность. 
+ 
+3. Поиск и анализ: 
+   - Программа анализирует файлы Excel на основе заданных параметров и ищет подходящие регуляторы. 
+   - Она проверяет диапазоны входного и выходного давления в файле Excel, чтобы найти соответствующие регуляторы. 
+   - Если найдено совпадение, программа регистрирует соответствующую информацию, включая название регулятора, седло и пропускную способность. 
+ 
+4. Журналирование и результаты: 
+   - Программа генерирует файл журнала с результатами анализа, включая найденные регуляторы и их подробности. 
+   - После завершения анализа файл журнала открывается автоматически. 
+ 
+## Использование 
+ 
+1. Запуск программы: 
+   - Запустите программу, и появится графический пользовательский интерфейс (GUI). 
+ 
+2. Ввод параметров: 
+   - Введите значения входного давления (PIn), выходного давления (POt) и пропускной способности в соответствующие поля ввода. 
+ 
+3. Перетаскивание файлов Excel: 
+   - Перетащите файлы Excel (.xlsx), содержащие данные о регуляторах, в программу. 
+   - Программа проанализирует файлы на основе заданных параметров. 
+ 
+4. Анализ и просмотр результатов: 
+   - Нажмите кнопку "Подобрать регулятор", чтобы начать анализ. 
+   - Программа будет искать подходящие регуляторы на основе заданных параметров. 
+   - Результаты будут отображены в текстовой области, а также будет сгенерирован файл журнала с подробной информацией. 
+ 
+5. Просмотр файла журнала: 
+   - После завершения анализа файл журнала откроется автоматически. 
+   - Файл журнала содержит информацию о найденных регуляторах и их подробностях. 
+ 
+## Зависимости 
+ 
+Программа  selRegulator  зависит от следующих библиотек: 
+-  tkinter : для создания графического пользовательского интерфейса. 
+-  openpyxl : для работы с файлами Excel (.xlsx). 
+-  docx : для работы с документами Word (.docx). 
+-  tkinterdnd2 : для реализации функции перетаскивания файлов в tkinter. 
+ 
+Пожалуйста, убедитесь, что эти библиотеки установлены перед запуском программы. 
+ 
+## Ограничения 
+ 
+- Программа в настоящее время поддерживает только файлы Excel (.xlsx) для анализа. 
+- Программа предполагает определенную структуру в файлах Excel, как указано в документации кода. 
+- Программа разработана для конкретного случая использования и может не подходить для других сценариев без модификаций. 
+ 
+## Заключение 
+ 
+Программа  selRegulator  предоставляет удобный интерфейс для анализа файлов Excel и выбора 
+подходящих регуляторов на основе заданных параметров. Она автоматизирует процесс поиска и 
+регистрации соответствующей информации, что упрощает выполнение задач анализа для пользователей.
+
 
 Для корректной работы openpyxl_image_loader в файле библиотеки: sheet_image_loader.py
 
@@ -72,7 +122,7 @@ from openpyxl.styles import PatternFill
 from openpyxl_image_loader import SheetImageLoader
 from docx import Document
 
-class Find_and_fix_in_doc:
+class selRegulator:
     def __init__(self):
         self.data = {}
         self.data_found = {}
@@ -174,6 +224,9 @@ class Find_and_fix_in_doc:
         self.status_worck_cycle()
 
     def is_int(self, value) -> bool:
+        """Функция is_int, принимает значение
+        и если это число возвращает True,
+        иначе False"""
         try:
             int(value)
             return True
@@ -201,6 +254,9 @@ class Find_and_fix_in_doc:
             return False
 
     def __open_file_dialog(self) -> None:
+        """Функция __open_file_dialog, отвечает
+        за загрузку файла через контекстный
+        диалог через проводник"""
         file_path = filedialog.askopenfilename(filetypes=[("All Files", "*"),
                                                         ("Excel Files", "*.xlsx"),
                                                           ("Doc Files",  "*.doc", ),
@@ -209,6 +265,9 @@ class Find_and_fix_in_doc:
             self.lb.insert(tk.END, file_path)
 
     def __file_placed_drop_zone(self, e:str) -> None:
+        """Функция __file_placed_drop_zone, отвечает
+        за добавление и форматировании пути файла
+        в дроп зону при его перетаскивании туда"""
         list_path = "".join(e.data.replace("{", "")).split("}")[:-1]
         #Вводим пути в дроп бокс с форматированием
         [self.lb.insert(tk.END, file) for file in list_path]
@@ -217,14 +276,19 @@ class Find_and_fix_in_doc:
         # self.input_name_file.insert(0,  os.path.splitext(os.path.basename(list_path[-1]))[0]+"подбор"+".log")  # Вставка текста в поле ввода
 
     def __res_file_name(self) -> str:
-        if self.self_file_name_var.get():
-            return self.input_name_file.get()+".txt"
+        """Функция __res_file_name, собирает название
+        файла логов в который будет записан результат"""
+        if self.saved_conf_self_file_name_var:
+            return self.saved_conf_input_name_file+".txt"
         
         return "Pвх-{0} Pвых-{1} ПрСп-{2}.txt".format(self.input_PIn.get(), 
                                                     self.input_POt.get(), 
                                                     self.input_bandwidth.get())
   
     def __logging_found_device(self, name_devace:str, saddle:str, found_bandwidth:int, need_bandwidth:int, defolt_bandwidth:str)-> None:
+        """Функция __logging_found_device, добавляет
+        в словарь найденных устройств новые записи
+        об устройствах"""
         self.data_found_id+=1
         self.data_found[self.data_found_id] = {"Регулятор":name_devace,
                                                "Седло":saddle,
@@ -235,6 +299,9 @@ class Find_and_fix_in_doc:
         
 
     def write_log_found_reg(self) -> None:
+        """Функция write_log_found_reg, записывает
+        в файл для логирования все найденные девайсы
+        сортируя их по проценту загрузки"""
         sorted_data = sorted(self.data_found.items(), key=lambda x: float(x[1]["Процент"]), reverse=True)
 
         for key, value in sorted_data:
@@ -246,11 +313,27 @@ class Find_and_fix_in_doc:
             self.__write_log_wrapper("Процент загрузки пропускной спос. регулятора c необходимой пропускной способностью ({}) составляет {}%".format(value["Необходимая"],value["Процент"]))
         self.data_found = {}
 
+    def __saved_conf_search(self) -> None:
+        """Функция __saved_conf_search, сохраняет конфигурацию
+        поиска устройства для отдельного запуска"""
+        
+        self.saved_conf_self_file_name_var = self.self_file_name_var.get()
+        self.saved_conf_input_name_file = self.input_name_file.get()
+        self.saved_conf_left_to_right = self.left_to_right.get()
+        self.saved_conf_PZK_position_sensor = self.PZK_position_sensor.get()
+        self.saved_conf_Regulator_for_liquefied_gas = self.Regulator_for_liquefied_gas.get()
+
 
     def conduct_analysis(self, file_path:str,
                          inlet_pressure:float, 
                          output_pressure:float, 
                          traffic_capacity:float) -> int:
+        """Функция conduct_analysis, распарсивает экселевский файл
+        и ищет подходящие ячейки по входным данным.
+        Возвращает колличество найденных девайсов в файле."""
+        
+        self.__saved_conf_search()
+
         regulators_found = 0
         workbook = openpyxl.load_workbook(file_path)
         for sheet_name in workbook.sheetnames:
@@ -464,6 +547,8 @@ class Find_and_fix_in_doc:
 
 
     def __core_render(self) -> None:
+        """Функция __core_render, производит отрисовку
+        основных элементов и фреймов"""
         self.status_frame = ttk.Frame(self.root, style="TFrame")
         self.status_frame.pack(fill=tk.X, side=tk.TOP)
         self.status_label = ttk.Label(self.status_frame, text="Ожидание работы", style="TLabel")
@@ -485,6 +570,8 @@ class Find_and_fix_in_doc:
         self.__button_render()
 
     def __create_menu(self):
+        """Функция __create_menu, производит отрисовку
+        верхнего меню"""
         self.menubar = tk.Menu(self.root)
         self.root.config(menu=self.menubar)
 
@@ -500,12 +587,15 @@ class Find_and_fix_in_doc:
         self.menubar.add_cascade(label="Помощь", menu=self.help_menu)
 
     def open_file(self):
+        """Функция open_file, привязана
+        к кнопке верхнего меню (окрыть)"""
         self.__open_file_dialog()
         # Логика открытия файла
-        pass
 
 
     def show_about(self):
+        """Функция show_about, привязана
+        к кнопке верхнего меню (о программе)"""
         # Логика отображения информации о программе
         about_window = tk.Toplevel(self.root)
         about_window.title("О программе")
@@ -531,6 +621,8 @@ class Find_and_fix_in_doc:
 
 
     def __drop_zone_render(self) -> None:
+        """Функция __drop_zone_render, рендер
+        дроп зоны и виджета статуса работы"""        
         self.lb = tk.Listbox(self.frame, width=30, height=10)
         self.lb.insert(1, "Перетащите xlsx таблицу с данными о регуляторах")
         self.lb.configure(justify=tk.CENTER)
@@ -549,6 +641,9 @@ class Find_and_fix_in_doc:
         self.text_widget_res.pack(fill=tk.BOTH, expand=True, side=tk.BOTTOM)
 
     def __input_data_render(self) -> None:
+        """Функция __input_data_render, рендер
+        элементов ввода и конфигурации поиска регулятора"""  
+                
         self.label_PIn = ttk.Label(self.in_data_frame, text="Входное давление - Рвх МПа:", style="TLabel")
         self.label_PIn.grid(row=0, column=0, pady=3)
 
@@ -578,17 +673,31 @@ class Find_and_fix_in_doc:
         self.input_name_file = ttk.Entry(self.in_data_frame)
         self.input_name_file.grid(row=8, column=0, pady=(0,10),sticky="ew",padx=(10))
 
+        self.left_to_right = tk.BooleanVar()
+        self.checkbox = ttk.Checkbutton(self.in_data_frame, text="Регуляторы слева направо\n (по умолчанию справа налево)", variable=self.left_to_right, style="TCheckbutton")
+        self.checkbox.grid(row=9, column=0, pady=(0,10),sticky="ew",padx=(10))
+
+        self.PZK_position_sensor = tk.BooleanVar()
+        self.checkbox = ttk.Checkbutton(self.in_data_frame, text="Датчик положения ПЗК", variable=self.PZK_position_sensor, style="TCheckbutton")
+        self.checkbox.grid(row=10, column=0, pady=(0,10),sticky="ew",padx=(10))
+
+        self.Regulator_for_liquefied_gas = tk.BooleanVar()
+        self.checkbox = ttk.Checkbutton(self.in_data_frame, text="Регулятор для сжиженного газа", variable=self.Regulator_for_liquefied_gas, style="TCheckbutton")
+        self.checkbox.grid(row=11, column=0, pady=(0,10),sticky="ew",padx=(10))
+
 
 
     def __button_render(self) -> None:
+        """Функция __button_render, рендер
+        рабочих кнопок""" 
         self.select_button = ttk.Button(self.in_data_frame, text="Подобрать регулятор", command=self.replacement_button_pressed, style="TButton")
-        self.select_button.grid(row=9, column=0, pady=5)
+        self.select_button.grid(row=12, column=0, pady=5)
 
         self.open_button = ttk.Button(self.in_data_frame, text="Открыть файл", command=self.__open_file_dialog, style="TButton")
-        self.open_button.grid(row=10, column=0, pady=5)
+        self.open_button.grid(row=13, column=0, pady=5)
 
         self.remove_button = ttk.Button(self.in_data_frame, text="Удалить", command=self.remove_button_pressed, style="TButton")
-        self.remove_button.grid(row=11, column=0, pady=5)
+        self.remove_button.grid(row=14, column=0, pady=5)
 
         
 
@@ -629,6 +738,6 @@ class Find_and_fix_in_doc:
         self.root.mainloop()
 
 if __name__ == "__main__":
-    Find_and_fix_in_doc().draw_window()
+    selRegulator().draw_window()
 
     
