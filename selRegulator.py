@@ -334,14 +334,20 @@ class selRegulator:
         number_found = 0
 
         sorted_data = sorted(self.data_found.items(), key=lambda x: float(x[1]["Процент"]), reverse=True)
+        
+        self.list_in_range_value = [item for item in sorted_data if self.saved_conf_minimum_load <= float(item[1]["Процент"]) <= self.saved_conf_maximum_load]
 
-        for key, value in sorted_data:
+        for key, value in self.list_in_range_value:
             self.__write_log_wrapper("======================")
             self.__write_log_wrapper("Регулятор: {}".format(value["Регулятор"]))
             self.__write_log_wrapper("Седло: {}".format(value["Седло"]))
             self.__write_log_wrapper("Пропускная способность регулятора при выбранных параметрах: {}".format(value["Пропускная"]))
             self.__write_log_wrapper("Необходимая пропускная способность с учётом +20%: {}".format(value["Необходимая"]))
             self.__write_log_wrapper("Процент загрузки пропускной спос. регулятора c необходимой пропускной способностью ({}) составляет {}%".format(value["Необходимая"],value["Процент"]))
+        
+
+    def __clear_data_found_device(self) -> None:
+        self.list_in_range_value = []
         self.data_found = {}
 
     def __saved_conf_search(self) -> None:
@@ -353,6 +359,9 @@ class selRegulator:
         self.saved_conf_left_to_right = self.left_to_right.get()
         self.saved_conf_PZK_position_sensor = self.PZK_position_sensor.get()
         self.saved_conf_Regulator_for_liquefied_gas = self.Regulator_for_liquefied_gas.get()
+
+        self.saved_conf_minimum_load = int(self.minimum_load.get())
+        self.saved_conf_maximum_load =  int(self.maximum_load.get())
     
     def search_several_controller_table_algorithm(self,
                                             inlet_pressure:float, 
@@ -594,6 +603,10 @@ class selRegulator:
         if len(self.processed_urls) == 0:
             self.show_error_message("Добавьте файлы xlsx")
             return
+        
+        if not self.is_int(self.maximum_load.get()) or not self.is_int(self.minimum_load.get()):
+            self.show_error_message("Некорректный диапазон процента загрузки")
+            return
 
         for path_file, _ in self.processed_urls.items():
             if path_file.replace(" ", "") != "":
@@ -662,8 +675,10 @@ class selRegulator:
 
                     #self.show_info_message("В файле {0} исправлено: {1} некорректных записей с кириллицей.".format(worck_patch,str(number_change),))
                     self.__write_log_wrapper("!-!-!-!-!-!-!-!-!-!-!-!-!-!-!-!-!-!-!-!-!-!-!-!-!-")
-                    self.__write_log_wrapper("В файле {0} найдено {1} подходящих регуляторов.".format(path_file,regulators_found))
+                    self.__write_log_wrapper("В файле {0} найдено {1} подходящих регуляторов.".format(path_file,len(self.list_in_range_value)))
                     self.__write_log_wrapper("!-!-!-!-!-!-!-!-!-!-!-!-!-!-!-!-!-!-!-!-!-!-!-!-!-")
+                    
+                    self.__clear_data_found_device()
                 else:
                     self.show_error_message("Введите все входные данные!")
 
@@ -792,29 +807,50 @@ class selRegulator:
 
         self.input_bandwidth = ttk.Entry(self.in_data_frame)
         self.input_bandwidth.grid(row=5, column=0, pady=(0,10),sticky="ew",padx=(10))
+        
+        #Показать регуляторы с загрузкой от - до
+        self.lebel_loading_range = ttk.Label(self.in_data_frame, text="Диапазон процента загрузки:", style="TLabel")
+        self.lebel_loading_range.grid(row=6, column=0, pady=3)
 
+        self.frame_loading_range = ttk.Frame(self.in_data_frame, style="TFrame")
+        self.frame_loading_range.grid(row=7, column=0, pady=3)
+
+        self.min_lebel_loading_range = ttk.Label(self.frame_loading_range, text="Min % :", style="TLabel")
+        self.min_lebel_loading_range.pack(side="left")
+
+        self.minimum_load = ttk.Entry(self.frame_loading_range, width=10)
+        self.minimum_load.pack(side="left")
+        self.minimum_load.insert(0, "20")
+
+        self.max_lebel_loading_range = ttk.Label(self.frame_loading_range, text="- Max % :", style="TLabel")
+        self.max_lebel_loading_range.pack(side="left")
+
+        self.maximum_load = ttk.Entry(self.frame_loading_range, width=10)
+        self.maximum_load.pack(side="left")
+        self.maximum_load.insert(0, "100")
+        ###
 
         self.label_name = ttk.Label(self.in_data_frame, text="Название файла:", style="TLabel")
-        self.label_name.grid(row=6, column=0, pady=(20,0))
+        self.label_name.grid(row=8, column=0, pady=(20,0))
 
         self.self_file_name_var = tk.BooleanVar()
         self.checkbox = ttk.Checkbutton(self.in_data_frame, text="Своё название результирующего файла", variable=self.self_file_name_var, style="TCheckbutton")
-        self.checkbox.grid(row=7, column=0, pady=(0,10),sticky="ew",padx=(10))
+        self.checkbox.grid(row=9, column=0, pady=(0,10),sticky="ew",padx=(10))
 
         self.input_name_file = ttk.Entry(self.in_data_frame)
-        self.input_name_file.grid(row=8, column=0, pady=(0,10),sticky="ew",padx=(10))
+        self.input_name_file.grid(row=10, column=0, pady=(0,10),sticky="ew",padx=(10))
 
         self.left_to_right = tk.BooleanVar()
         self.checkbox = ttk.Checkbutton(self.in_data_frame, text="Регуляторы справа налево\n (по умолчанию слева направо)", variable=self.left_to_right, style="TCheckbutton")
-        self.checkbox.grid(row=9, column=0, pady=(0,10),sticky="ew",padx=(10))
+        self.checkbox.grid(row=11, column=0, pady=(0,10),sticky="ew",padx=(10))
 
         self.PZK_position_sensor = tk.BooleanVar()
         self.checkbox = ttk.Checkbutton(self.in_data_frame, text="Датчик положения ПЗК", variable=self.PZK_position_sensor, style="TCheckbutton")
-        self.checkbox.grid(row=10, column=0, pady=(0,10),sticky="ew",padx=(10))
+        self.checkbox.grid(row=12, column=0, pady=(0,10),sticky="ew",padx=(10))
 
         self.Regulator_for_liquefied_gas = tk.BooleanVar()
         self.checkbox = ttk.Checkbutton(self.in_data_frame, text="Регулятор для сжиженного газа", variable=self.Regulator_for_liquefied_gas, style="TCheckbutton")
-        self.checkbox.grid(row=11, column=0, pady=(0,10),sticky="ew",padx=(10))
+        self.checkbox.grid(row=13, column=0, pady=(0,10),sticky="ew",padx=(10))
 
 
 
@@ -822,13 +858,13 @@ class selRegulator:
         """Функция __button_render, рендер
         рабочих кнопок""" 
         self.select_button = ttk.Button(self.in_data_frame, text="Подобрать регулятор", command=self.replacement_button_pressed, style="TButton")
-        self.select_button.grid(row=12, column=0, pady=5)
+        self.select_button.grid(row=14, column=0, pady=5)
 
         self.open_button = ttk.Button(self.in_data_frame, text="Открыть файл", command=self.__open_file_dialog, style="TButton")
-        self.open_button.grid(row=13, column=0, pady=5)
+        self.open_button.grid(row=15, column=0, pady=5)
 
         self.remove_button = ttk.Button(self.in_data_frame, text="Удалить", command=self.remove_button_pressed, style="TButton")
-        self.remove_button.grid(row=14, column=0, pady=5)
+        self.remove_button.grid(row=16, column=0, pady=5)
 
         
 
@@ -844,7 +880,7 @@ class selRegulator:
         """
         self.root = TkinterDnD.Tk()
         self.root.title("Программа подбора регулятора")
-        self.root.geometry("800x600")
+        self.root.geometry("800x700")
         try:
             self.root.iconbitmap("icon.ico")
         except:
