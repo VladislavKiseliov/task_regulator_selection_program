@@ -120,9 +120,25 @@ from openpyxl_image_loader import SheetImageLoader
 
 class selRegulator:
     def __init__(self):
+        self.__create_path_folder_for_save()
+
         self.data = {}
         self.data_found = {}
         self.data_found_id = 0
+
+    def __create_path_folder_for_save(self) -> None:
+        """Создаём папку для сохранения файлов логов если её нет.
+        получаем путь к этой папке."""
+        # Получение текущей директории
+        self.current_dir = os.getcwd()
+
+        # Сборка пути к папке
+        self.folder_save_name = "записи подборов регулятора"
+        self.folder_path = os.path.join(self.current_dir, self.folder_save_name)
+
+        # Проверка существования папки и создание, если не существует
+        if not os.path.exists(self.folder_path):
+            os.makedirs(self.folder_path)
 
     def get_excel_column(self, index:int) -> str:
         """
@@ -149,7 +165,7 @@ class selRegulator:
             index //= 26
         return column
 
-    def __split_and_insert_newline(self, text):
+    def __split_and_insert_newline(self, text) -> None:
         words = text.split()  # Разделение строки на список слов
         result = text
         if len(words) > 5:
@@ -158,6 +174,12 @@ class selRegulator:
             second_half = ' '.join(words[half_length:])  # Объединение слов после середины
             result = f"{first_half}\n{second_half}"
         return result
+
+    def __clear_widget_res_in_app(self) -> None
+        self.text_widget_res.config(state=tk.NORMAL)  # Установка состояния виджета в NORMAL
+        self.text_widget_res.delete('1.0', tk.END)
+        self.text_widget_res.config(state=tk.DISABLED)  # Возвращение состояния виджета
+        self.root.update()
 
     def __write_log_wrapper(self, mess:str) ->None:
         self.text_widget_res.config(state=tk.NORMAL)  # Установка состояния виджета в NORMAL
@@ -196,6 +218,10 @@ class selRegulator:
         selected_index = self.lb.curselection()
         if selected_index:
             self.lb.delete(selected_index)
+
+    def folder_save_open(self) -> None:
+        """Функция для обработки нажатия кнопки <Удалить>""" 
+        subprocess.Popen(f'explorer "{os.path.normpath(self.folder_path)}"')
 
     def status_worck_cycle(self) -> None:
         """Функция status_worck_cycle, обновляет статус работы. 
@@ -276,10 +302,15 @@ class selRegulator:
         файла логов в который будет записан результат"""
         if self.saved_conf_self_file_name_var:
             return self.saved_conf_input_name_file+".txt"
-        
-        return "Pвх-{0} Pвых-{1} ПрСп-{2}.txt".format(self.input_PIn.get(), 
+
+        # Сборка пути к файлу
+        name_file = "Pвх-{0} Pвых-{1} ПрСп-{2}.txt".format(self.input_PIn.get(), 
                                                     self.input_POt.get(), 
                                                     self.input_bandwidth.get())
+        
+        file_path = os.path.join(self.current_dir, self.folder_save_name, name_file)
+
+        return file_path
   
     def __logging_found_device(self, name_devace:str, saddle:str, found_bandwidth:int, need_bandwidth:int, defolt_bandwidth:str)-> None:
         """Функция __logging_found_device, добавляет
@@ -306,6 +337,9 @@ class selRegulator:
                                                "Процент":"{:.2f}".format(100-(((int(found_bandwidth)-int(need_bandwidth))/int(found_bandwidth))*100))}
         
     def start_initial_log(self) -> None:
+        #Очищаем виджет с результатами сканирования в самой программе
+        self.__clear_widget_res_in_app()
+
         self.__write_log_wrapper("======================")
         self.__write_log_wrapper("Поиск регуляторов по следущим параметрам: Входное давление-{0} Выходное давление-{1} Пропускная способность-{2}".format(self.input_PIn.get(),self.input_POt.get(), self.input_bandwidth.get()))
         
@@ -342,7 +376,7 @@ class selRegulator:
             self.__write_log_wrapper("Регулятор: {}".format(value["Регулятор"]))
             self.__write_log_wrapper("Седло: {}".format(value["Седло"]))
             self.__write_log_wrapper("Пропускная способность регулятора при выбранных параметрах: {}".format(value["Пропускная"]))
-            self.__write_log_wrapper("Необходимая пропускная способность с учётом +20%: {}".format(value["Необходимая"]))
+            #self.__write_log_wrapper("Необходимая пропускная способность с учётом +20%: {}".format(value["Необходимая"]))
             self.__write_log_wrapper("Процент загрузки пропускной спос. регулятора c необходимой пропускной способностью ({}) составляет {}%".format(value["Необходимая"],value["Процент"]))
         
 
@@ -400,7 +434,7 @@ class selRegulator:
                                     if len(mb_diap_Pain) == 2: 
                                         if  float(mb_diap_Pain[0]) <= float(inlet_pressure) <= float(mb_diap_Pain[1]):
 
-                                            bandwidth = int(traffic_capacity)+(int(traffic_capacity)/100)*20
+                                            bandwidth = int(traffic_capacity)
                                             #Проверяем можем ли мы перевести значение пропускной способности в число
                                             if self.is_int(row_scr[i_cell]):
 
@@ -413,7 +447,7 @@ class selRegulator:
                                     #Если ячейка входного давления НЕ является диапазоном
                                     else:
                                         if  float(mb_diap_Pain[0]) == float(inlet_pressure):
-                                            bandwidth = int(traffic_capacity)+(int(traffic_capacity)/100)*20
+                                            bandwidth = int(traffic_capacity)
                                             #Проверяем можем ли мы перевести значение пропускной способности в число
                                             if self.is_int(row_scr[i_cell]):
                                                 if int(row_scr[i_cell]) >= bandwidth and (("Ж" in name_devace or "ж" in name_devace) == self.saved_conf_Regulator_for_liquefied_gas):
@@ -434,7 +468,7 @@ class selRegulator:
                                     #Если ячейка входного давления является диапазоном
                                     if len(mb_diap_Pain) == 2: 
                                         if  float(mb_diap_Pain[0]) <= float(inlet_pressure) <= float(mb_diap_Pain[1]):
-                                            bandwidth = int(self.traffic_capacity)+(int(self.traffic_capacity)/100)*20
+                                            bandwidth = int(self.traffic_capacity)+(int(self.traffic_capacity)/100)
                                             #Проверяем можем ли мы перевести значение пропускной способности в число
                                             if self.is_int(row_scr[i_cell]):
                                                 if int(row_scr[i_cell]) >= bandwidth and (("Ж" in name_devace or "ж" in name_devace) == self.saved_conf_Regulator_for_liquefied_gas):
@@ -444,7 +478,7 @@ class selRegulator:
                                     #Если ячейка входного давления НЕ является диапазоном
                                     else:
                                         if  float(mb_diap_Pain[0]) == float(inlet_pressure):
-                                            bandwidth = int(traffic_capacity)+(int(traffic_capacity)/100)*20
+                                            bandwidth = int(traffic_capacity)
                                             #Проверяем можем ли мы перевести значение пропускной способности в число
                                             if self.is_int(row_scr[i_cell]):          
                                                 #Если это значение больше или равно необходимого
@@ -504,7 +538,7 @@ class selRegulator:
                                     if len(mb_diap_Pain) == 2: 
                                         if  float(mb_diap_Pain[0]) <= float(inlet_pressure) <= float(mb_diap_Pain[1]):
 
-                                            bandwidth = int(traffic_capacity)+(int(traffic_capacity)/100)*20
+                                            bandwidth = int(traffic_capacity)
                                             #Проверяем можем ли мы перевести значение пропускной способности в число
                                             if self.is_int(row_scr[i_cell]):
                                                 #Проверяем, найденная пропускная способность больше ли необходимой, и является ли регулятор для сжиженного газа если необходимо
@@ -518,7 +552,7 @@ class selRegulator:
                                     #Если ячейка входного давления НЕ является диапазоном
                                     else:
                                         if  float(mb_diap_Pain[0]) == float(inlet_pressure):
-                                            bandwidth = int(traffic_capacity)+(int(traffic_capacity)/100)*20
+                                            bandwidth = int(traffic_capacity)
                                             #Проверяем можем ли мы перевести значение пропускной способности в число
                                             if self.is_int(row_scr[i_cell]):
                                                 if int(row_scr[i_cell]) >= bandwidth and (("Ж" in name_devace or "ж" in name_devace) == self.saved_conf_Regulator_for_liquefied_gas):
@@ -538,7 +572,7 @@ class selRegulator:
                                     #Если ячейка входного давления является диапазоном
                                     if len(mb_diap_Pain) == 2: 
                                         if  float(mb_diap_Pain[0]) <= float(inlet_pressure) <= float(mb_diap_Pain[1]):
-                                            bandwidth = int(self.traffic_capacity)+(int(self.traffic_capacity)/100)*20
+                                            bandwidth = int(self.traffic_capacity)+(int(self.traffic_capacity)/100)
                                             #Проверяем можем ли мы перевести значение пропускной способности в число
                                             if self.is_int(row_scr[i_cell]):
                                                 if int(row_scr[i_cell]) >= bandwidth and (("Ж" in name_devace or "ж" in name_devace) == self.saved_conf_Regulator_for_liquefied_gas):
@@ -548,7 +582,7 @@ class selRegulator:
                                     #Если ячейка входного давления НЕ является диапазоном
                                     else:
                                         if  float(mb_diap_Pain[0]) == float(inlet_pressure):
-                                            bandwidth = int(traffic_capacity)+(int(traffic_capacity)/100)*20
+                                            bandwidth = int(traffic_capacity)
                                             #Проверяем можем ли мы перевести значение пропускной способности в число
                                             if self.is_int(row_scr[i_cell]):
                                                 #Если это значение больше или равно необходимого
@@ -687,10 +721,8 @@ class selRegulator:
 
         self.update_status_worck("Ожидание работы")
         # Открытие файла в который записаны данные
-        subprocess.Popen(["notepad.exe", filename_log])
-        subprocess.Popen(f'explorer "{os.path.normpath(os.path.dirname(path_file))}"')
-
-
+        #subprocess.Popen(["notepad.exe", filename_log])
+        #subprocess.Popen(f'explorer "{os.path.normpath(os.path.dirname(path_file))}"')
 
     def __core_render(self) -> None:
         """Функция __core_render, производит отрисовку
@@ -738,7 +770,6 @@ class selRegulator:
         self.__open_file_dialog()
         # Логика открытия файла
 
-
     def show_about(self):
         """Функция show_about, привязана
         к кнопке верхнего меню (о программе)"""
@@ -765,17 +796,18 @@ class selRegulator:
         close_button = ttk.Button(about_window, text="Закрыть", command=about_window.destroy)
         close_button.pack()
 
-
     def __drop_zone_render(self) -> None:
         """Функция __drop_zone_render, рендер
         дроп зоны и виджета статуса работы"""        
-        self.lb = tk.Listbox(self.frame, width=30, height=10)
+        self.lb = tk.Listbox(self.frame, width=30, height=5)
         self.lb.insert(1, "Перетащите xlsx таблицу с данными о регуляторах")
         self.lb.configure(justify=tk.CENTER)
         self.lb.drop_target_register(DND_FILES)
         self.lb.dnd_bind('<<Drop>>', self.__file_placed_drop_zone)
         self.lb.pack(fill=tk.BOTH, expand=True, side=tk.TOP)
 
+
+        #Виджет отображения результатов поиска 
         self.text_widget_res = tk.Text(self.frame, height=30, width=67)
         self.text_widget_res.pack()
 
@@ -852,21 +884,20 @@ class selRegulator:
         self.checkbox = ttk.Checkbutton(self.in_data_frame, text="Регулятор для сжиженного газа", variable=self.Regulator_for_liquefied_gas, style="TCheckbutton")
         self.checkbox.grid(row=13, column=0, pady=(0,10),sticky="ew",padx=(10))
 
-
-
     def __button_render(self) -> None:
         """Функция __button_render, рендер
         рабочих кнопок""" 
         self.select_button = ttk.Button(self.in_data_frame, text="Подобрать регулятор", command=self.replacement_button_pressed, style="TButton")
         self.select_button.grid(row=14, column=0, pady=5)
 
-        self.open_button = ttk.Button(self.in_data_frame, text="Открыть файл", command=self.__open_file_dialog, style="TButton")
+        self.open_button = ttk.Button(self.in_data_frame, text="Загрузить файл", command=self.__open_file_dialog, style="TButton")
         self.open_button.grid(row=15, column=0, pady=5)
 
         self.remove_button = ttk.Button(self.in_data_frame, text="Удалить", command=self.remove_button_pressed, style="TButton")
         self.remove_button.grid(row=16, column=0, pady=5)
 
-        
+        self.open_folder_button = ttk.Button(self.in_data_frame, text="Открыть папку логов", command=self.folder_save_open, style="TButton")
+        self.open_folder_button.grid(row=17, column=0, pady=5)
 
     def draw_window(self) -> None:
         """
@@ -880,7 +911,7 @@ class selRegulator:
         """
         self.root = TkinterDnD.Tk()
         self.root.title("Программа подбора регулятора")
-        self.root.geometry("800x700")
+        self.root.geometry("800x710")
         try:
             self.root.iconbitmap("icon.ico")
         except:

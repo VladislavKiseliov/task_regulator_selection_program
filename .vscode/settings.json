@@ -1,5 +1,6 @@
 {
     "files.associations": {
         "modbus_rtu.h": "c"
-    }
+    },
+    "editor.inlineSuggest.showToolbar": "onHover"
 }

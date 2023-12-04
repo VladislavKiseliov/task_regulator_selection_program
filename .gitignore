@@ -2,3 +2,4 @@ build
 dist
 selRegulator.spec
 __pycache__
+"записи подборов регулятора"
