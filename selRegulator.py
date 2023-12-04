@@ -157,7 +157,6 @@ class selRegulator:
         3. Возвращаем полученную строку  column . 
  
         Таким образом, данный код преобразует числовой индекс в формате Excel в соответствующий столбец."""
-
         column = ""
         while index > 0:
             index -= 1
@@ -166,6 +165,7 @@ class selRegulator:
         return column
 
     def __split_and_insert_newline(self, text) -> None:
+        """Функция для разделения строчки на двое если одна длинее 5 слов"""
         words = text.split()  # Разделение строки на список слов
         result = text
         if len(words) > 5:
@@ -175,13 +175,15 @@ class selRegulator:
             result = f"{first_half}\n{second_half}"
         return result
 
-    def __clear_widget_res_in_app(self) -> None
+    def __clear_widget_res_in_app(self) -> None:
+        """Функция для очистки результата работы программы в виджете"""
         self.text_widget_res.config(state=tk.NORMAL)  # Установка состояния виджета в NORMAL
         self.text_widget_res.delete('1.0', tk.END)
         self.text_widget_res.config(state=tk.DISABLED)  # Возвращение состояния виджета
         self.root.update()
 
     def __write_log_wrapper(self, mess:str) ->None:
+        """Функция для добавления данных в виджет логирования в программе"""
         self.text_widget_res.config(state=tk.NORMAL)  # Установка состояния виджета в NORMAL
         self.text_widget_res.insert(tk.END, "\n"+self.__split_and_insert_newline(mess))
         self.text_widget_res.config(state=tk.DISABLED)  # Возвращение состояния виджета
@@ -337,6 +339,7 @@ class selRegulator:
                                                "Процент":"{:.2f}".format(100-(((int(found_bandwidth)-int(need_bandwidth))/int(found_bandwidth))*100))}
         
     def start_initial_log(self) -> None:
+        """start_initial_log добавляет стартовые данные о сканировании в логи"""
         #Очищаем виджет с результатами сканирования в самой программе
         self.__clear_widget_res_in_app()
 
@@ -381,6 +384,7 @@ class selRegulator:
         
 
     def __clear_data_found_device(self) -> None:
+        """очищает списки найденных регуляторов"""
         self.list_in_range_value = []
         self.data_found = {}
 
