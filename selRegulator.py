@@ -109,8 +109,9 @@ import os
 import tkinter.ttk as ttk
 import itertools
 import subprocess
-import re
+import json
 import math
+import hashlib
 
 from MyLogger import *
 from decimal import Decimal
@@ -118,13 +119,29 @@ from tkinter import messagebox, filedialog
 from tkinterdnd2 import DND_FILES, TkinterDnD
 from openpyxl_image_loader import SheetImageLoader
 
+def calculate_hash(string:str) -> str:
+    # Создаем объект хеша
+    hash_object = hashlib.sha256()
+
+    # Обновляем хеш с данными из строки
+    hash_object.update(string.encode('utf-8'))
+
+    # Получаем хеш-сумму в виде шестнадцатеричной строки
+    hash_string = hash_object.hexdigest()
+
+    return hash_string
+
 class selRegulator:
     def __init__(self):
-        self.__create_path_folder_for_save()
-
+        self.file_path_list = []
         self.data = {}
         self.data_found = {}
         self.data_found_id = 0
+
+        self.__create_path_folder_for_save()
+        self.__conf_file_loader()
+
+
 
     def __create_path_folder_for_save(self) -> None:
         """Создаём папку для сохранения файлов логов если её нет.
@@ -139,6 +156,73 @@ class selRegulator:
         # Проверка существования папки и создание, если не существует
         if not os.path.exists(self.folder_path):
             os.makedirs(self.folder_path)
+
+    def __conf_file_loader(self) -> None:
+        """Загружаем json с конфигом, в котором находятся пути сохраённных xmlx файлов"""
+        try:
+            # Получение текущей директории
+            self.current_dir = os.getcwd()
+
+            # Сборка пути к папке
+            self.conf_file_name = "selRegulConf.json"
+            self.conf_file_path = os.path.join(self.current_dir, self.conf_file_name)
+
+            data_for_writte = {"Path":{}}
+
+            # Проверка существования папки и создание, если не существует
+            if not os.path.exists(self.conf_file_path):
+                with open(self.conf_file_path, 'w') as file:
+                    json.dump(data_for_writte, file)
+                    file.close()
+                return 0
+            else:
+                with open(self.conf_file_path, 'r') as file:
+                    self.data_conf = json.load(file)
+                    file.close()
+
+                for key,value in self.data_conf["Path"].items():
+                    self.file_path_list.append(value)
+        except:
+            pass
+
+           
+    
+    def __add_load_save_path(self):
+        #Добавляем полученные пути в лайбел для путей если они доступны
+        for file in self.file_path_list:
+            if os.path.exists(file):
+                self.lb.insert(tk.END, file) 
+
+    def __save_patch_in_conf(self, patch:str) -> None:
+        """Сохраняем путь в файл конфигурации"""
+        try:
+            if patch not in self.file_path_list:
+                self.file_path_list.append(patch)   
+
+            # Проверка существования папки и создание, если не существует
+            if not os.path.exists(self.conf_file_path):
+                open(self.conf_file_path, 'w').close()
+                return
+            else:
+                #with open(self.conf_file_path, 'r') as file:
+                #    self.data_conf = json.load(file)
+                #    file.close()
+
+                #for _,value in self.data_conf["Path"].items():
+                #   if value not in self.file_path_list:
+                #       self.file_path_list.append(value)
+
+                with open(self.conf_file_path, 'w') as file:
+                    for elem in self.file_path_list:
+                        self.data_conf["Path"][calculate_hash(elem)] = elem
+                    
+                    json.dump(self.data_conf, file)
+
+                    file.close()
+        except:
+            pass
+
+
 
     def get_excel_column(self, index:int) -> str:
         """
@@ -218,6 +302,25 @@ class selRegulator:
     def remove_button_pressed(self) -> None:
         """Функция для обработки нажатия кнопки <Удалить>""" 
         selected_index = self.lb.curselection()
+
+        value = self.lb.get(selected_index)
+
+        try:
+            keys_to_remove = []
+            dict_data = self.data_conf["Path"]
+
+            for key, val in dict_data.items():
+                if val == value:
+                    
+                    keys_to_remove.append(key)
+
+            for key in keys_to_remove:
+                del dict_data[key]
+
+            self.file_path_list.remove(value)
+        except:
+            pass
+
         if selected_index:
             self.lb.delete(selected_index)
 
@@ -281,6 +384,8 @@ class selRegulator:
         """Функция __open_file_dialog, отвечает
         за загрузку файла через контекстный
         диалог через проводник"""
+
+
         file_path = filedialog.askopenfilename(filetypes=[("All Files", "*"),
                                                         ("Excel Files", "*.xlsx"),
                                                           ("Doc Files",  "*.doc", ),
@@ -657,6 +762,8 @@ class selRegulator:
                     self.show_error_message("Введите корректные значения для поиска регулятора")
                     return 
 
+                self.__save_patch_in_conf(path_file)
+
                 #self.show_info_message(str("Поиск подходящего регулятора запущен"))
                 self.status_text = "В работе"
                 self.update_status_worck("В работе.")
@@ -744,6 +851,9 @@ class selRegulator:
 
         self.__create_menu()
         self.__drop_zone_render()
+
+        #Добавляем в дроп зону пути из сохранений
+        self.__add_load_save_path()
 
         self.in_data_frame = ttk.Frame(self.root, style="TFrame")
         self.in_data_frame.pack(side=tk.RIGHT,anchor="n", expand=True)
