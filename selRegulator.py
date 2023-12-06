@@ -104,5 +104,4 @@ from src.index import SelRegulator
 
 if __name__ == "__main__":
     SelRegulator().draw_window()
-
     

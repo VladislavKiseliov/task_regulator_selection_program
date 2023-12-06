@@ -8,6 +8,7 @@ import subprocess
 import json
 import math
 
+from src.FoundCorValue import FoundCorValue
 from src.MiniFunc import *
 from src.MyLogger import *
 from decimal import Decimal
@@ -17,6 +18,7 @@ from openpyxl_image_loader import SheetImageLoader
 
 class SelRegulator:
     def __init__(self):
+        self.list_in_range_value = []
         self.file_path_list = []
         self.data = {}
         self.data_found = {}
@@ -51,12 +53,12 @@ class SelRegulator:
             self.conf_file_name = "selRegulConf.json"
             self.conf_file_path = os.path.join(self.current_dir, self.conf_file_name)
 
-            data_for_writte = {"Path":{}}
+            self.data_conf = {"Path":{}}
 
             # Проверка существования папки и создание, если не существует
             if not os.path.exists(self.conf_file_path):
                 with open(self.conf_file_path, 'w') as file:
-                    json.dump(data_for_writte, file)
+                    json.dump(self.data_conf, file)
                     file.close()
                 return 0
             else:
@@ -78,8 +80,8 @@ class SelRegulator:
                 self.lb.insert(tk.END, file) 
 
     def __save_patch_in_conf(self, patch:str) -> None:
-        """Сохраняем путь в файл конфигурации"""
         try:
+            """Сохраняем путь в файл конфигурации"""
             if patch not in self.file_path_list:
                 self.file_path_list.append(patch)   
 
@@ -105,32 +107,6 @@ class SelRegulator:
                     file.close()
         except:
             pass
-
-
-
-    def get_excel_column(self, index:int) -> str:
-        """
-        Данный код представляет собой метод  get_excel_column , 
-        который принимает индекс в виде целого 
-        числа и возвращает столбец в формате Excel в виде строки. 
- 
-        Шаги выполнения кода: 
-        1. Создается пустая строка  column . 
-        2. Пока значение  index  больше 0, выполняются следующие действия: 
-            - Уменьшаем значение  index  на 1. 
-            - Вычисляем остаток от деления  index  на 26 и прибавляем 65, чтобы получить ASCII-код символа. 
-            Затем преобразуем полученный ASCII-код в символ с помощью функции  chr() . 
-            - Полученный символ добавляем в начало строки  column . 
-            - Делим значение  index  на 26 с округлением в меньшую сторону. 
-        3. Возвращаем полученную строку  column . 
- 
-        Таким образом, данный код преобразует числовой индекс в формате Excel в соответствующий столбец."""
-        column = ""
-        while index > 0:
-            index -= 1
-            column = chr(index % 26 + 65) + column
-            index //= 26
-        return column
 
     def __split_and_insert_newline(self, text) -> None:
         """Функция для разделения строчки на двое если одна длинее 5 слов"""
@@ -413,7 +389,7 @@ class SelRegulator:
                     
                     if len(mb_diap_Paut) == 2:
                         #Если ячейка выходного давления является диапазоном
-                        name_devace = sheet[self.get_excel_column(i_cell+1)+"1"].value
+                        name_devace = sheet[get_excel_column(i_cell+1)+"1"].value
                         if float(mb_diap_Paut[0]) <= float(output_pressure) <= float(mb_diap_Paut[1]):
                             row_scr_i=0
                             for row_scr in sheet.iter_rows(values_only=True):
@@ -450,7 +426,7 @@ class SelRegulator:
                         
                     elif mb_diap_Paut[0] != "None":
                         if float(output_pressure) == float(mb_diap_Paut[0]):
-                            name_devace = sheet[self.get_excel_column(i_cell+1)+"1"].value
+                            name_devace = sheet[get_excel_column(i_cell+1)+"1"].value
                             row_scr_i=0
                             for row_scr in sheet.iter_rows(values_only=True):
                                 if row_scr_i > 2:
@@ -667,42 +643,32 @@ class SelRegulator:
                     #Пишем в файл лога стартовые данные поиска
                     self.start_initial_log()
                     #Запуск функции анализа
+
                     regulators_found += self.conduct_analysis(workbook, 
                                                               PIn,
                                                               POt, 
                                                               bandwidth)
 
                     if regulators_found == 0:
-                        value = Decimal(math.ceil(POt * 100) / 100)
-                        step = Decimal('0.0001')
-                        
                         self.__write_log_wrapper("Точного совпадения не найдено")
-                        self.__write_log_wrapper("Попытка найти регулятор с большим выходным давлением.")
-                        while value<(Decimal("{:.4f}".format(POt)))*2:
-                            value = Decimal("{:.4f}".format(value))
-                            #Запуск функции анализа
-                            regulators_found += self.conduct_analysis(workbook, 
+                        self.__write_log_wrapper("Попытка найти регулятор с близкими параметрами.")
+
+                        #Находим ближайшие допустимые значения
+                        finding_real_value = FoundCorValue(workbook,PIn,POt)
+                        PIn,POt = finding_real_value()
+
+                        regulators_found += self.conduct_analysis(workbook, 
                                                               PIn,
-                                                              value, 
+                                                              POt, 
                                                               bandwidth)
-                            if regulators_found!=0:
-                                self.__write_log_wrapper("======================")
-                                self.__write_log_wrapper("Выполнен поиск и найдены регуляторы по входному: {0} и выходному {1} давлению.".format(PIn,value))
-                                self.__write_log_wrapper("")
-                                break
                             
-                            if value >= Decimal('0.01'):
-                                step = Decimal('0.001')
-                            elif value >= Decimal('0.1'):
-                                step = Decimal('0.01')
-                            elif value >= Decimal('1'):
-                                step = Decimal('0.1')
-                            
-                            value+=step
 
                     if regulators_found == 0:
                         self.__write_log_wrapper("Регуляторы с необходимыми параметрами не найдены.")
                     else:
+                        self.__write_log_wrapper("======================")
+                        self.__write_log_wrapper("Выполнен поиск и найдены регуляторы по входному: {0} и выходному {1} давлению.".format(PIn,POt))
+                        self.__write_log_wrapper("")
                         self.write_log_found_reg()
 
                     #self.show_info_message("В файле {0} исправлено: {1} некорректных записей с кириллицей.".format(worck_patch,str(number_change),))
