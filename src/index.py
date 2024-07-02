@@ -654,8 +654,8 @@ class SelRegulator:
                         self.__write_log_wrapper("Попытка найти регулятор с близкими параметрами.")
 
                         #Находим ближайшие допустимые значения
-                        finding_real_value = FoundCorValue(workbook,PIn,POt)
-                        PIn,POt = finding_real_value()
+                        #finding_real_value = FoundCorValue(workbook,PIn,POt)
+                        #PIn,POt = finding_real_value()
 
                         regulators_found += self.conduct_analysis(workbook, 
                                                               PIn,
