@@ -7,10 +7,16 @@ import itertools
 import subprocess
 import json
 import math
+import sys
 
+from PyQt5 import QtCore, QtGui, QtWidgets
+
+from src.DropArea import *
+from src.mainwindow import Ui_MainWindow
 from src.FoundCorValue import FoundCorValue
 from src.MiniFunc import *
 from src.MyLogger import *
+
 from decimal import Decimal
 from tkinter import messagebox, filedialog
 from tkinterdnd2 import DND_FILES, TkinterDnD
@@ -24,10 +30,188 @@ class SelRegulator:
         self.data_found = {}
         self.data_found_id = 0
 
-        self.__create_path_folder_for_save()
+        self.data_conf = {"Path":{}}
+        self.status_animation = itertools.cycle(["В работе.", "В работе..", "В работе..."])
+
         self.__conf_file_loader()
+        self.__create_path_folder_for_save()
+
+        self.app = QtWidgets.QApplication(sys.argv)
+        self.MainWindow = QtWidgets.QMainWindow()
+        self.ui = Ui_MainWindow()
+        self.ui.setupUi(self.MainWindow)
+
+        self.__drop_area_create();
+        self.__connect_config();
+
+    def __connect_config(self) -> None:
+        self.ui.select_button.clicked.connect(self.replacement_button_pressed) #Коннект на нажатие кнопки подбора регулятора
+        self.ui.open_button.clicked.connect(self.__open_file_dialog) #Коннект на нажатие кнопки подбора регулятора
+        self.ui.remove_button.clicked.connect(self.drop_area.remove_selected_file) #Коннект на нажатие кнопки подбора регулятора
+        self.ui.open_folder_button.clicked.connect(self.folder_save_open) # Коннект на нажатие кнопки открытия папки сохранения логов
+
+        #Подключение событий изменения текста в полях калькулятора
+        self.ui.lineEdit_gas_consumption.textChanged.connect(self.on_gas_consumption_changed)
+        self.ui.lineEdit_gas_pressure.textChanged.connect(self.on_gas_consumption_changed)
+        # self.ui.lineEdit_gas_speed.textChanged.connect(self.on_gas_consumption_changed)
+        self.ui.lineEdit_diametet_of_gas_pipeline.editingFinished.connect(self.determine_calculation_method)
 
 
+    def determine_calculation_method(self):
+        gas_consumption = self.ui.lineEdit_gas_consumption.text()
+
+        if gas_consumption == "":
+            self.calculate_gas_consumption("")
+        else:
+            self.calculate_pressure_and_speed("")
+    
+    def on_gas_consumption_changed(self, text):
+        try:
+            gas_consumption = self.ui.lineEdit_gas_consumption.text()
+            gas_pressure = self.ui.lineEdit_gas_pressure.text()
+
+            if not gas_consumption or not gas_pressure:
+                return
+
+            gas_consumption = float(gas_consumption)
+            gas_pressure = float(gas_pressure)
+
+            if gas_pressure < 50:
+                gas_speed = 15
+            elif gas_pressure <= 600:
+                gas_speed = 25
+            else:
+                gas_speed = 30
+
+            # Отключаем сигнал перед изменением значения
+            self.ui.lineEdit_gas_speed.blockSignals(True)
+            self.ui.lineEdit_diametet_of_gas_pipeline.blockSignals(True)
+
+            self.ui.lineEdit_gas_speed.setText(str(gas_speed))
+            
+            result = (0.036238) * math.sqrt(gas_consumption * 293 / (0.1 + gas_pressure / 1000) / gas_speed) * 10
+            rounded_result = math.ceil(result)
+
+            self.ui.lineEdit_gas_speed.setText(str(gas_speed))
+            self.ui.lineEdit_diametet_of_gas_pipeline.setText(str(rounded_result))
+
+            # Включаем сигнал после изменения значения
+            self.ui.lineEdit_gas_speed.blockSignals(False)
+            self.ui.lineEdit_diametet_of_gas_pipeline.blockSignals(False)
+
+        except ValueError:
+            self.ui.lineEdit_diametet_of_gas_pipeline.setText("Ошибка: неверный ввод")
+        except ZeroDivisionError:
+            self.ui.lineEdit_diametet_of_gas_pipeline.setText("Ошибка: деление на ноль")
+        except Exception as e:
+            self.ui.lineEdit_diametet_of_gas_pipeline.setText(f"Ошибка: {str(e)}")
+
+    def calculate_pressure_and_speed(self, text):
+        try:
+            gas_consumption = self.ui.lineEdit_gas_consumption.text()
+            pipeline_diameter = self.ui.lineEdit_diametet_of_gas_pipeline.text()
+
+            if not gas_consumption or not pipeline_diameter:
+                return
+
+            gas_consumption = float(gas_consumption)
+            pipeline_diameter = float(pipeline_diameter)
+
+            if pipeline_diameter <= 0:
+                self.ui.lineEdit_gas_pressure.setText("Ошибка: неверный диаметр")
+                return
+
+            gas_speed = 30
+
+            # Формула для расчёта давления газа при данном диаметре трубопровода и скорости газа
+            gas_pressure = 1000 * ((gas_consumption * 293) / ((pipeline_diameter / 0.36238) ** 2 * gas_speed) - 0.1)
+
+            if (gas_pressure < 0):
+                gas_speed = 25
+                gas_pressure = 1000 * ((gas_consumption * 293) / ((pipeline_diameter / 0.36238) ** 2 * gas_speed) - 0.1)
+            
+            if (gas_pressure < 0):
+                gas_speed = 15
+                gas_pressure = 1000 * ((gas_consumption * 293) / ((pipeline_diameter / 0.36238) ** 2 * gas_speed) - 0.1)
+
+            if(gas_pressure < 0):
+                gas_pressure = "Ошибка: некорректные данные"
+            else:
+                gas_pressure = round(gas_pressure, 2)
+
+            # Отключаем сигнал перед изменением значения
+            self.ui.lineEdit_gas_speed.blockSignals(True)
+            self.ui.lineEdit_gas_pressure.blockSignals(True)
+
+            self.ui.lineEdit_gas_speed.setText(str(gas_speed))
+            self.ui.lineEdit_gas_pressure.setText(str(gas_pressure))
+
+            # Включаем сигнал после изменения значения
+            self.ui.lineEdit_gas_speed.blockSignals(False)
+            self.ui.lineEdit_gas_pressure.blockSignals(False)
+
+        except ValueError:
+            self.ui.lineEdit_gas_pressure.setText("Ошибка: неверный ввод")
+            self.ui.lineEdit_gas_speed.setText("Ошибка: неверный ввод")
+        except ZeroDivisionError:
+            self.ui.lineEdit_gas_pressure.setText("Ошибка: деление на ноль")
+            self.ui.lineEdit_gas_speed.setText("Ошибка: деление на ноль")
+        except Exception as e:
+            self.ui.lineEdit_gas_pressure.setText(f"Ошибка: {str(e)}")
+            self.ui.lineEdit_gas_speed.setText(f"Ошибка: {str(e)}")
+
+    def calculate_gas_consumption(self, text):
+        try:
+            gas_pressure = self.ui.lineEdit_gas_pressure.text()
+            pipeline_diameter = self.ui.lineEdit_diametet_of_gas_pipeline.text()
+
+            if not gas_pressure or not pipeline_diameter:
+                return
+
+            gas_pressure = float(gas_pressure)
+            pipeline_diameter = float(pipeline_diameter)
+
+            if pipeline_diameter <= 0:
+                self.ui.lineEdit_gas_consumption.setText("Ошибка: неверный диаметр")
+                return
+
+            if gas_pressure < 50:
+                gas_speed = 15
+            elif gas_pressure <= 600:
+                gas_speed = 25
+            else:
+                gas_speed = 30
+
+            # Формула для расчёта расхода газа при данном давлении и диаметре трубопровода
+            gas_consumption = ((pipeline_diameter / 0.36238) ** 2 * (0.1 + gas_pressure / 1000) * gas_speed) / 293
+
+
+            # Отключаем сигнал перед изменением значения
+            self.ui.lineEdit_gas_speed.blockSignals(True)
+            self.ui.lineEdit_gas_consumption.blockSignals(True)
+
+            self.ui.lineEdit_gas_speed.setText(str(gas_speed))
+            self.ui.lineEdit_gas_consumption.setText(str(round(gas_consumption, 2)))
+
+            # Включаем сигнал после изменения значения
+            self.ui.lineEdit_gas_speed.blockSignals(False)
+            self.ui.lineEdit_gas_consumption.blockSignals(False)
+
+        except ValueError:
+            self.ui.lineEdit_gas_consumption.setText("Ошибка: неверный ввод")
+            self.ui.lineEdit_gas_speed.setText("Ошибка: неверный ввод")
+        except ZeroDivisionError:
+            self.ui.lineEdit_gas_consumption.setText("Ошибка: деление на ноль")
+            self.ui.lineEdit_gas_speed.setText("Ошибка: деление на ноль")
+        except Exception as e:
+            self.ui.lineEdit_gas_consumption.setText(f"Ошибка: {str(e)}")
+            self.ui.lineEdit_gas_speed.setText(f"Ошибка: {str(e)}")
+    
+
+    def __drop_area_create(self) -> None:
+        # Создаем виджет DropArea и добавляем его в scrollArea_2
+        self.drop_area = DropArea();
+        self.ui.scrollArea_2.setWidget(self.drop_area)
 
     def __create_path_folder_for_save(self) -> None:
         """Создаём папку для сохранения файлов логов если её нет.
@@ -53,7 +237,7 @@ class SelRegulator:
             self.conf_file_name = "selRegulConf.json"
             self.conf_file_path = os.path.join(self.current_dir, self.conf_file_name)
 
-            self.data_conf = {"Path":{}}
+
 
             # Проверка существования папки и создание, если не существует
             if not os.path.exists(self.conf_file_path):
@@ -120,44 +304,55 @@ class SelRegulator:
         return result
 
     def __clear_widget_res_in_app(self) -> None:
-        """Функция для очистки результата работы программы в виджете"""
-        self.text_widget_res.config(state=tk.NORMAL)  # Установка состояния виджета в NORMAL
-        self.text_widget_res.delete('1.0', tk.END)
-        self.text_widget_res.config(state=tk.DISABLED)  # Возвращение состояния виджета
-        self.root.update()
+        """Функция для очистки результата работы программы в виджете QPlainTextEdit"""
+        self.ui.plainTextEdit.setReadOnly(False)  # Установка режима редактирования
+        self.ui.plainTextEdit.clear()  # Очистка содержимого виджета
+        self.ui.plainTextEdit.setReadOnly(True)  # Возвращение в режим только для чтения
+
 
     def __write_log_wrapper(self, mess:str) ->None:
         """Функция для добавления данных в виджет логирования в программе"""
-        self.text_widget_res.config(state=tk.NORMAL)  # Установка состояния виджета в NORMAL
-        self.text_widget_res.insert(tk.END, "\n"+self.__split_and_insert_newline(mess))
-        self.text_widget_res.config(state=tk.DISABLED)  # Возвращение состояния виджета
+        current_text = self.ui.plainTextEdit.toPlainText()
+        new_text = current_text + "\n" + self.__split_and_insert_newline(mess)
+        self.ui.plainTextEdit.setPlainText(new_text)
 
         self.logger.write_log(mess)
-        self.root.update()
 
     def show_error_message(self, text_err:str) -> None:
         """Функция show_error_message выводит сообщение об ошибке с заданным текстом
         в виде диалогового окна."""
 
-        messagebox.showerror("Ошибка", text_err)
+        msg = QMessageBox()
+        msg.setIcon(QMessageBox.Critical)
+        msg.setWindowTitle("Внимание")
+        msg.setText(text_err)
+        #msg.setInformativeText("Дополнительная информация о предупреждении.")
+        msg.setStandardButtons(QMessageBox.Ok)
+        msg.exec_()
 
     def show_warning_message(self, text_war:str) -> None:
         """Функция show_warning_message выводит сообщение (Внимание!) с заданным текстом
         в виде диалогового окна."""
 
-        messagebox.showwarning("Внимание!", text_war)
+        msg = QMessageBox()
+        msg.setIcon(QMessageBox.Warning)
+        msg.setWindowTitle("Внимание")
+        msg.setText(text_war)
+        #msg.setInformativeText("Дополнительная информация о предупреждении.")
+        msg.setStandardButtons(QMessageBox.Ok)
+        msg.exec_()
 
     def show_info_message(self, text_war:str) -> None:
         """Функция show_info_message выводит дочернее окно (Внимание!) с заданным текстом
         в виде диалогового окна."""
 
-        top = tk.Toplevel()
-        top.title("Внимание!")
-        label = tk.Label(top, text=text_war)
-        label.pack(padx=20, pady=20)
-        button = tk.Button(top, text="OK", command=top.destroy)
-        button.pack(pady=10)
-        top.update()
+        msg = QMessageBox()
+        msg.setIcon(QMessageBox.Information)
+        msg.setWindowTitle("Внимание")
+        msg.setText(text_war)
+        #msg.setInformativeText("Дополнительная информация о предупреждении.")
+        msg.setStandardButtons(QMessageBox.Ok)
+        msg.exec_()
 
     def remove_button_pressed(self) -> None:
         """Функция для обработки нажатия кнопки <Удалить>""" 
@@ -188,27 +383,26 @@ class SelRegulator:
         """Функция для обработки нажатия кнопки <Удалить>""" 
         subprocess.Popen(f'explorer "{os.path.normpath(self.folder_path)}"')
 
-    def status_worck_cycle(self) -> None:
-        """Функция status_worck_cycle, обновляет статус работы. 
-        Если статус содержит текст "В работе", то функция обновляет 
-        метку статуса и получает следующий элемент анимации статуса. 
-        Затем функция вызывает саму себя через 500 миллисекунд, 
-        чтобы продолжить цикл работы. Если статус не содержит текст 
-        "В работе", то функция просто обновляет метку статуса."""
+    def status_work_cycle(self) -> None:
+        """Функция status_work_cycle обновляет статус работы в статус-баре.
+        Если статус содержит текст 'В работе', функция обновляет статус-бар и
+        получает следующий элемент анимации статуса. Затем функция вызывает
+        саму себя через 500 миллисекунд для продолжения цикла работы.
+        Если статус не содержит текст 'В работе', функция просто обновляет статус-бар."""
 
         if "В работе" in self.status_text:
-            self.status_label.config(text=self.status_text)
+            self.ui.statusbar.showMessage(self.status_text)
             self.status_text = next(self.status_animation)
-            self.status_frame.after(500, self.status_worck_cycle)
+            QTimer.singleShot(500, self.status_work_cycle)  # Вызываем себя через 500 мс
         else:
-            self.status_label.config(text=self.status_text)
+            self.ui.statusbar.showMessage(self.status_text)
 
     def update_status_worck(self, status_text) -> None:
         """Функция update_status_worck, является обёрткой
         над функцией status_worck_cycle. Позволяя корректно 
         останавливать самовызов этой функции"""
         self.status_text = status_text
-        self.status_worck_cycle()
+        self.status_work_cycle()
 
     def is_int(self, value) -> bool:
         """Функция is_int, принимает значение
@@ -240,18 +434,17 @@ class SelRegulator:
             self.show_error_message("Недоступно чтение исходного файла!")
             return False
 
-    def __open_file_dialog(self) -> None:
+    def __open_file_dialog(self):
         """Функция __open_file_dialog, отвечает
         за загрузку файла через контекстный
         диалог через проводник"""
 
-
-        file_path = filedialog.askopenfilename(filetypes=[("All Files", "*"),
-                                                        ("Excel Files", "*.xlsx"),
-                                                          ("Doc Files",  "*.doc", ),
-                                                          ("Docx File",  "*.docx")])
+        options = QFileDialog.Options()
+        file_filter = "All Files (*);;Excel Files (*.xlsx);;Doc Files (*.doc);;Docx Files (*.docx)"
+        file_path, _ = QFileDialog.getOpenFileName(self.ui.centralwidget, "Выберите файл", "", file_filter, options=options)
         if file_path:
-            self.lb.insert(tk.END, file_path)
+            self.drop_area.add_file(file_path)
+
 
     def __file_placed_drop_zone(self, e:str) -> None:
         """Функция __file_placed_drop_zone, отвечает
@@ -271,9 +464,9 @@ class SelRegulator:
             return self.saved_conf_input_name_file+".txt"
 
         # Сборка пути к файлу
-        name_file = "Pвх-{0} Pвых-{1} ПрСп-{2}.txt".format(self.input_PIn.get(), 
-                                                    self.input_POt.get(), 
-                                                    self.input_bandwidth.get())
+        name_file = "Pвх-{0} Pвых-{1} ПрСп-{2}.txt".format(self.ui.input_PIn.text(), 
+                                                    self.ui.input_POt.text(), 
+                                                    self.ui.input_bandwidth.text())
         
         file_path = os.path.join(self.current_dir, self.folder_save_name, name_file)
 
@@ -306,7 +499,8 @@ class SelRegulator:
     def start_initial_log(self) -> None:
         """start_initial_log добавляет стартовые данные о сканировании в логи"""
         self.__write_log_wrapper("======================")
-        self.__write_log_wrapper("Поиск регуляторов по следущим параметрам: Входное давление-{0} Выходное давление-{1} Пропускная способность-{2}".format(self.input_PIn.get(),self.input_POt.get(), self.input_bandwidth.get()))
+        self.__write_log_wrapper("Поиск регуляторов по следущим параметрам: Входное давление-{0} \
+                                 Выходное давление-{1} Пропускная способность-{2}".format(self.ui.input_PIn.text(),self.ui.input_POt.text(), self.ui.input_bandwidth.text()))
         
         if self.saved_conf_left_to_right:
             direct = "справа налево"
@@ -354,14 +548,14 @@ class SelRegulator:
         """Функция __saved_conf_search, сохраняет конфигурацию
         поиска устройства для отдельного запуска"""
         
-        self.saved_conf_self_file_name_var = self.self_file_name_var.get()
-        self.saved_conf_input_name_file = self.input_name_file.get()
-        self.saved_conf_left_to_right = self.left_to_right.get()
-        self.saved_conf_PZK_position_sensor = self.PZK_position_sensor.get()
-        self.saved_conf_Regulator_for_liquefied_gas = self.Regulator_for_liquefied_gas.get()
+        self.saved_conf_self_file_name_var = self.ui.self_file_name_var.isChecked()
+        self.saved_conf_input_name_file = self.ui.input_name_file.text()
+        self.saved_conf_left_to_right = self.ui.left_to_right.isChecked()
+        self.saved_conf_PZK_position_sensor = self.ui.PZK_position_sensor.isChecked()
+        self.saved_conf_Regulator_for_liquefied_gas = self.ui.Regulator_for_liquefied_gas.isChecked()
 
-        self.saved_conf_minimum_load = int(self.minimum_load.get())
-        self.saved_conf_maximum_load =  int(self.maximum_load.get())
+        self.saved_conf_minimum_load = int(self.ui.min_lebel_loading_range.text())
+        self.saved_conf_maximum_load =  int(self.ui.max_lebel_loading_range.text())
     
     def search_several_controller_table_algorithm(self,
                                             inlet_pressure:float, 
@@ -583,28 +777,29 @@ class SelRegulator:
         return regulators_found
 
     def replacement_button_pressed(self) -> None:
-        """Функция для поиска и исправления кириллицы 
-        в тегах файлов формата docx. Функция принимает путь к файлу 
-        и маркер тега в виде цифрового ID. Если файлы не являются форматом 
-        docx или doc, то выводится сообщение об ошибке. Если маркер тега не указан, 
-        то также выводится сообщение об ошибке. После исправления кириллицы 
-        в тегах, функция выводит количество исправленных записей и записывает 
-        лог в файл.
+        """
         """
         regulators_found = 0
         filename_log = False
-        listbox_data = self.lb.get(0, tk.END)
+
+        listbox_data = self.drop_area.get_file_paths()
         self.processed_urls = {}
 
-        for index in range(1, len(listbox_data)):
+
+
+        for index in range(len(listbox_data)):
+            print(listbox_data[index])
             if os.path.splitext(listbox_data[index])[1] == '.xlsx':
                 self.processed_urls[listbox_data[index]] = 0
+
+        print(listbox_data)
+        print(self.processed_urls)
 
         if len(self.processed_urls) == 0:
             self.show_error_message("Добавьте файлы xlsx")
             return
         
-        if not self.is_int(self.maximum_load.get()) or not self.is_int(self.minimum_load.get()):
+        if not self.is_int(self.ui.max_lebel_loading_range.text()) or not self.is_int(self.ui.min_lebel_loading_range.text()):
             self.show_error_message("Некорректный диапазон процента загрузки")
             return
         
@@ -615,9 +810,9 @@ class SelRegulator:
             if path_file.replace(" ", "") != "":
 
                 try:
-                    PIn = float(self.input_PIn.get().replace(",", '.').replace(" ", ''))
-                    POt = float(self.input_POt.get().replace(",", '.').replace(" ", ''))
-                    bandwidth = float(self.input_bandwidth.get().replace(",", '.'.replace(" ", '')))
+                    PIn = float(self.ui.input_PIn.text().replace(",", '.').replace(" ", ''))
+                    POt = float(self.ui.input_POt.text().replace(",", '.').replace(" ", ''))
+                    bandwidth = float(self.ui.input_bandwidth.text().replace(",", '.'.replace(" ", '')))
                 except:
                     self.show_error_message("Введите корректные значения для поиска регулятора")
                     return 
@@ -696,7 +891,7 @@ class SelRegulator:
         self.status_label = ttk.Label(self.status_frame, text="Ожидание работы", style="TLabel")
         self.status_label.pack(pady=10)
         
-        self.status_animation = itertools.cycle(["В работе.", "В работе..", "В работе..."])
+
         self.update_status_worck("Ожидание работы")
 
         self.frame = ttk.Frame(self.root, style="TFrame")
@@ -876,28 +1071,31 @@ class SelRegulator:
         кнопка "Удалить" для удаления выбранных файлов из списка. Статус операции 
         отображается в метке, а анимация показывает, что операция выполняется.
         """
-        self.root = TkinterDnD.Tk()
-        self.root.title("Программа подбора регулятора")
-        self.root.geometry("800x710")
-        try:
-            self.root.iconbitmap("icon.ico")
-        except:
-            pass
-        self.style = ttk.Style()
-        self.style.configure("TFrame", background="lightgrey")
-        self.style.configure("TLabel", background="lightgrey")
-        self.style.configure("TButton",
-                        background="#007bff",
-                        foreground="black",
-                        relief=tk.FLAT,
-                        font=("Helvetica", 12),
-                        padding=10,
-                        width=20,
-                        borderwidth=0)
-        self.style.map("TButton",
-                  background=[("active", "#0056b3")],
-                  foreground=[("active", "black")])
+        # self.root = TkinterDnD.Tk()
+        # self.root.title("Программа подбора регулятора")
+        # self.root.geometry("800x710")
+        # try:
+        #     self.root.iconbitmap("icon.ico")
+        # except:
+        #     pass
+        # self.style = ttk.Style()
+        # self.style.configure("TFrame", background="lightgrey")
+        # self.style.configure("TLabel", background="lightgrey")
+        # self.style.configure("TButton",
+        #                 background="#007bff",
+        #                 foreground="black",
+        #                 relief=tk.FLAT,
+        #                 font=("Helvetica", 12),
+        #                 padding=10,
+        #                 width=20,
+        #                 borderwidth=0)
+        # self.style.map("TButton",
+        #           background=[("active", "#0056b3")],
+        #           foreground=[("active", "black")])
         
-        self.__core_render()
+        #self.__core_render()
 
-        self.root.mainloop()
+        #self.root.mainloop()
+
+        self.MainWindow.show()
+        sys.exit(self.app.exec_())
