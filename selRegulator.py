@@ -98,7 +98,9 @@ class SheetImageLoader:
 Для сборки в exe 
 Добавить файл https://github.com/pmgagne/tkinterdnd2/blob/master/hook-tkinterdnd2.py в 
 папку откуда запускается pyinstaller. И запустить через команду:
-pyinstaller --windowed --onefile --icon=icon.ico selRegulator.py --additional-hooks-dir=.
+
+pyinstaller --windowed --onefile --icon=icon.ico --name="Помощник конструктора ГПМ" --add-data "icon.ico;." selRegulator.py --additional-hooks-dir=.
+
 """
 from src.index import SelRegulator
 

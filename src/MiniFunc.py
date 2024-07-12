@@ -1,4 +1,4 @@
-import hashlib
+from imports import *
 
 def calculate_hash(string:str) -> str:
     # Создаем объект хеша

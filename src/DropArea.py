@@ -1,8 +1,4 @@
-import sys
-from PyQt5.QtWidgets import QApplication, QLabel, QVBoxLayout, QWidget, QMainWindow, QMessageBox, QPushButton, QFileDialog, QListWidget, QListWidgetItem, QLineEdit
-from PyQt5.QtCore import Qt, QTimer
-from PyQt5.QtGui import QFont
-
+from imports import *
 class DropArea(QListWidget):
     def __init__(self, parent=None):
         super().__init__(parent)
@@ -11,7 +7,8 @@ class DropArea(QListWidget):
         self.setStyleSheet("QListWidget { background-color : lightgrey; border: 2px dashed black; }")
         
         self.file_paths = []
-        self.placeholder_text = "Перетащите файлы сюда"
+        self.placeholder_text = "Перетащите файлы формата .xlsx  сюда"
+        self.allowed_extensions = {'.xlsx', '.doc', '.docx'}
         self.update_placeholder()
 
     def update_placeholder(self):
@@ -39,20 +36,26 @@ class DropArea(QListWidget):
         if event.mimeData().hasUrls():
             event.acceptProposedAction()
             urls = event.mimeData().urls()
-            new_files = [url.toLocalFile() for url in urls if url.isLocalFile()]
-            self.file_paths.extend(new_files)
-            for file in new_files:
-                self.add_item(file)
-            self.update_placeholder()
+            new_files = [url.toLocalFile() for url in urls if url.isLocalFile() and self.is_allowed_file(url.toLocalFile())]
+            
+            if new_files:
+                self.file_paths.extend(new_files)
+                for file in new_files:
+                    self.add_item(file)
+                self.update_placeholder()
+
+    def is_allowed_file(self, file_path):
+        return any(file_path.endswith(ext) for ext in self.allowed_extensions)
 
     def add_item(self, file_path):
         item = QListWidgetItem(file_path)
         self.addItem(item)
 
     def add_file(self, file_path):
-        self.file_paths.append(file_path)
-        self.add_item(file_path)
-        self.update_placeholder()
+        if self.is_allowed_file(file_path):
+            self.file_paths.append(file_path)
+            self.add_item(file_path)
+            self.update_placeholder()
 
     def remove_selected_file(self):
         selected_items = self.selectedItems()

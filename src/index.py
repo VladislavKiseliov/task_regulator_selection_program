@@ -1,29 +1,22 @@
-import tkinter as tk
-import shutil
-import openpyxl
-import os
-import tkinter.ttk as ttk
-import itertools
-import subprocess
-import json
-import math
-import sys
-
-from PyQt5 import QtCore, QtGui, QtWidgets
-
-from src.DropArea import *
-from src.mainwindow import Ui_MainWindow
-from src.FoundCorValue import FoundCorValue
-from src.MiniFunc import *
-from src.MyLogger import *
-
-from decimal import Decimal
-from tkinter import messagebox, filedialog
-from tkinterdnd2 import DND_FILES, TkinterDnD
-from openpyxl_image_loader import SheetImageLoader
+from imports import *
 
 class SelRegulator:
     def __init__(self):
+        """
+        Конструктор класса SelRegulator.
+
+        Инициализирует объект класса SelRegulator. Загружает конфигурационный файл,
+        создает папку для сохранения файлов и инициализирует пользовательский интерфейс.
+
+        Атрибуты:
+        - list_in_range_value: список значений в пределах диапазона
+        - file_path_list: список путей к файлам
+        - data: словарь для хранения данных
+        - data_found: словарь для хранения найденных данных
+        - data_found_id: идентификатор найденных данных
+        - data_conf: конфигурационный словарь с путями
+        - status_animation: итератор для анимации статуса
+        """
         self.list_in_range_value = []
         self.file_path_list = []
         self.data = {}
@@ -37,176 +30,265 @@ class SelRegulator:
         self.__create_path_folder_for_save()
 
         self.app = QtWidgets.QApplication(sys.argv)
+        
         self.MainWindow = QtWidgets.QMainWindow()
         self.ui = Ui_MainWindow()
         self.ui.setupUi(self.MainWindow)
+
+        self.change_speed = False
+        
+        try:
+            self.app.setWindowIcon(QIcon('icon.ico'))
+            self.MainWindow.setWindowIcon(QIcon('icon.ico'))
+        except:
+            pass
+
+        self.action_menu_2 = QAction("Помощь", self.MainWindow)
+        # Добавляем этот QAction на QMenuBar
+        self.ui.menubar.addAction(self.action_menu_2)
 
         self.__drop_area_create();
         self.__connect_config();
 
     def __connect_config(self) -> None:
+        """
+        Приватный метод подключения сигналов и слотов для элементов GUI.
+
+        Устанавливает соответствия между событиями пользовательского интерфейса
+        и методами класса SelRegulator.
+        """
         self.ui.select_button.clicked.connect(self.replacement_button_pressed) #Коннект на нажатие кнопки подбора регулятора
         self.ui.open_button.clicked.connect(self.__open_file_dialog) #Коннект на нажатие кнопки подбора регулятора
         self.ui.remove_button.clicked.connect(self.drop_area.remove_selected_file) #Коннект на нажатие кнопки подбора регулятора
         self.ui.open_folder_button.clicked.connect(self.folder_save_open) # Коннект на нажатие кнопки открытия папки сохранения логов
 
+        self.ui.buttom_menu_bar_open.triggered.connect(self.__open_file_dialog)
+        self.ui.buttom_menu_bar_exit.triggered.connect(self.MainWindow.close)
+        self.action_menu_2.triggered.connect(self.show_about)
+
+        self.ui.pushButton_make_calculation.clicked.connect(self.make_calculation)
+
         #Подключение событий изменения текста в полях калькулятора
-        self.ui.lineEdit_gas_consumption.textChanged.connect(self.on_gas_consumption_changed)
-        self.ui.lineEdit_gas_pressure.textChanged.connect(self.on_gas_consumption_changed)
-        # self.ui.lineEdit_gas_speed.textChanged.connect(self.on_gas_consumption_changed)
-        self.ui.lineEdit_diametet_of_gas_pipeline.editingFinished.connect(self.determine_calculation_method)
+        self.ui.input_PIn.editingFinished.connect(self.make_calculation)
+        self.ui.lineEdit_gas_speed.editingFinished.connect(self.make_calculation)
+        self.ui.lineEdit_diametet_of_gas_pipeline.editingFinished.connect(self.make_calculation)
+
+        #Подключение событий изменения текста в полях калькулятора выходного газопровода
+        self.ui.input_POt.editingFinished.connect(self.make_calculation)
+        self.ui.lineEdit_gas_speed_out.editingFinished.connect(self.make_calculation)
+        self.ui.lineEdit_diametet_of_gas_pipeline_out.editingFinished.connect(self.make_calculation)
 
 
-    def determine_calculation_method(self):
-        gas_consumption = self.ui.lineEdit_gas_consumption.text()
+        self.ui.input_bandwidth.editingFinished.connect(self.make_calculation)
 
-        if gas_consumption == "":
-            self.calculate_gas_consumption("")
+
+    def make_calculation(self) -> None:
+        """
+        Метод определения метода расчета в зависимости от наличия значения потребления газа.
+
+        Вызывает методы calculate_gas_consumption или calculate_pressure_and_speed в зависимости
+        от наличия значения в поле ввода потребления газа.
+
+
+        Формула для расчёта давления газа при данном диаметре трубопровода и скорости газа
+        gas_pressure = 1000 * ((gas_consumption * 293) / ((pipeline_diameter / 0.36238) ** 2 * gas_speed) - 0.1)
+
+        Формула для расчёта расхода газа при данном давлении и диаметре трубопровода
+        gas_consumption = ((pipeline_diameter / 0.36238) ** 2 * (0.1 + gas_pressure / 1000) * gas_speed) / 293
+        """
+        if (self.ui.QCB_male_diam_or_speed.isChecked()):
+            self.calculated_diametr()
+            self.calculated_diametr_out()
         else:
-            self.calculate_pressure_and_speed("")
+            self.calculated_speed_in()
+            self.calculated_speed_out()
     
-    def on_gas_consumption_changed(self, text):
+    def calculated_diametr(self) -> None:
+        """
+        Метод обработки изменений в поле ввода потребления газа.
+
+        При изменении значения в полях ввода газа и давления газа выполняет расчеты и обновляет
+        соответствующие поля ввода.
+        """
         try:
-            gas_consumption = self.ui.lineEdit_gas_consumption.text()
-            gas_pressure = self.ui.lineEdit_gas_pressure.text()
+            gas_consumption = self.ui.input_bandwidth.text()
+            gas_pressure = self.ui.input_PIn.text()
+            gas_speed = self.ui.lineEdit_gas_speed.text()
+
+            if not gas_consumption or not gas_pressure:
+                return
+
+
+            gas_consumption = float(gas_consumption)
+            gas_pressure = float(gas_pressure)*1000
+
+            if (self.ui.QCB_Auto_Speed_In.isChecked()):
+                if gas_pressure < 50:
+                    gas_speed = 15
+                elif 50<=gas_pressure<=600:
+                    gas_speed = 25
+                else:
+                    gas_speed = 30
+            
+            gas_speed = float(gas_speed)
+
+            
+
+            result = (0.036238) * math.sqrt(gas_consumption * 293 / (0.1 + gas_pressure / 1000) / gas_speed) * 10
+            rounded_result = math.ceil(result)
+
+            # Отключаем сигнал перед изменением значения
+            self.ui.lineEdit_diametet_of_gas_pipeline.blockSignals(True)
+            self.ui.lineEdit_gas_speed.blockSignals(True)
+
+            self.ui.lineEdit_diametet_of_gas_pipeline.setText(str(rounded_result))
+            self.ui.lineEdit_gas_speed.setText(str(gas_speed))
+
+            # Включаем сигнал после изменения значения
+            self.ui.lineEdit_diametet_of_gas_pipeline.blockSignals(False)
+            self.ui.lineEdit_gas_speed.blockSignals(False)
+
+        except ValueError:
+            self.ui.statusbar.showMessage("Ошибка: неверный ввод")
+        except ZeroDivisionError:
+            self.ui.statusbar.showMessage("Ошибка: деление на ноль")
+        except Exception as e:
+            self.ui.statusbar.showMessage(f"Ошибка: {str(e)}")
+
+    def calculated_diametr_out(self) -> None:
+        """
+        Метод обработки изменений в поле ввода потребления газа.
+
+        При изменении значения в полях ввода газа и давления газа выполняет расчеты и обновляет
+        соответствующие поля ввода.
+        """
+        try:
+            gas_consumption = self.ui.input_bandwidth.text()
+            gas_pressure = self.ui.input_POt.text()
+            gas_speed = self.ui.lineEdit_gas_speed_out.text()
 
             if not gas_consumption or not gas_pressure:
                 return
 
             gas_consumption = float(gas_consumption)
-            gas_pressure = float(gas_pressure)
+            gas_pressure = float(gas_pressure)*1000
 
-            if gas_pressure < 50:
-                gas_speed = 15
-            elif gas_pressure <= 600:
-                gas_speed = 25
-            else:
-                gas_speed = 30
-
-            # Отключаем сигнал перед изменением значения
-            self.ui.lineEdit_gas_speed.blockSignals(True)
-            self.ui.lineEdit_diametet_of_gas_pipeline.blockSignals(True)
-
-            self.ui.lineEdit_gas_speed.setText(str(gas_speed))
+            if (self.ui.QCB_Auto_Speed_Out.isChecked()):
+                if gas_pressure < 50:
+                    gas_speed = 15
+                elif 50<=gas_pressure<=600:
+                    gas_speed = 25
+                else:
+                    gas_speed = 30
             
+            gas_speed = float(gas_speed)
+
             result = (0.036238) * math.sqrt(gas_consumption * 293 / (0.1 + gas_pressure / 1000) / gas_speed) * 10
             rounded_result = math.ceil(result)
 
-            self.ui.lineEdit_gas_speed.setText(str(gas_speed))
-            self.ui.lineEdit_diametet_of_gas_pipeline.setText(str(rounded_result))
+            # Отключаем сигнал перед изменением значения
+            self.ui.lineEdit_diametet_of_gas_pipeline_out.blockSignals(True)
+            self.ui.lineEdit_gas_speed_out.blockSignals(True)
+
+            self.ui.lineEdit_diametet_of_gas_pipeline_out.setText(str(rounded_result))
+            self.ui.lineEdit_gas_speed_out.setText(str(gas_speed))
 
             # Включаем сигнал после изменения значения
-            self.ui.lineEdit_gas_speed.blockSignals(False)
-            self.ui.lineEdit_diametet_of_gas_pipeline.blockSignals(False)
+            self.ui.lineEdit_diametet_of_gas_pipeline_out.blockSignals(False)
+            self.ui.lineEdit_gas_speed_out.blockSignals(False)
 
         except ValueError:
-            self.ui.lineEdit_diametet_of_gas_pipeline.setText("Ошибка: неверный ввод")
+            self.ui.statusbar.showMessage("Ошибка: неверный ввод")
         except ZeroDivisionError:
-            self.ui.lineEdit_diametet_of_gas_pipeline.setText("Ошибка: деление на ноль")
+            self.ui.statusbar.showMessage("Ошибка: деление на ноль")
         except Exception as e:
-            self.ui.lineEdit_diametet_of_gas_pipeline.setText(f"Ошибка: {str(e)}")
+            self.ui.statusbar.showMessage(f"Ошибка: {str(e)}")
 
-    def calculate_pressure_and_speed(self, text):
+    def calculated_speed_in(self) -> None:
+        """
+        Метод обработки изменений в поле ввода потребления газа.
+
+        При изменении значения в полях ввода газа и давления газа выполняет расчеты и обновляет
+        соответствующие поля ввода.
+        """
         try:
-            gas_consumption = self.ui.lineEdit_gas_consumption.text()
-            pipeline_diameter = self.ui.lineEdit_diametet_of_gas_pipeline.text()
+            gas_consumption = self.ui.input_bandwidth.text()
+            gas_pressure = self.ui.input_PIn.text()
+            diametr = self.ui.lineEdit_diametet_of_gas_pipeline.text()
 
-            if not gas_consumption or not pipeline_diameter:
+            if not gas_consumption or not gas_pressure:
                 return
+
 
             gas_consumption = float(gas_consumption)
-            pipeline_diameter = float(pipeline_diameter)
+            gas_pressure = float(gas_pressure)*1000
+            diametr = float(diametr)
 
-            if pipeline_diameter <= 0:
-                self.ui.lineEdit_gas_pressure.setText("Ошибка: неверный диаметр")
-                return
+            # Вычисление скорости газа
+            gas_speed = (gas_consumption * 293) / ((diametr / 0.36238) ** 2 * (0.1 + gas_pressure / 1000))
 
-            gas_speed = 30
-
-            # Формула для расчёта давления газа при данном диаметре трубопровода и скорости газа
-            gas_pressure = 1000 * ((gas_consumption * 293) / ((pipeline_diameter / 0.36238) ** 2 * gas_speed) - 0.1)
-
-            if (gas_pressure < 0):
-                gas_speed = 25
-                gas_pressure = 1000 * ((gas_consumption * 293) / ((pipeline_diameter / 0.36238) ** 2 * gas_speed) - 0.1)
-            
-            if (gas_pressure < 0):
-                gas_speed = 15
-                gas_pressure = 1000 * ((gas_consumption * 293) / ((pipeline_diameter / 0.36238) ** 2 * gas_speed) - 0.1)
-
-            if(gas_pressure < 0):
-                gas_pressure = "Ошибка: некорректные данные"
-            else:
-                gas_pressure = round(gas_pressure, 2)
+            rounded_result = math.ceil(gas_speed)
 
             # Отключаем сигнал перед изменением значения
             self.ui.lineEdit_gas_speed.blockSignals(True)
-            self.ui.lineEdit_gas_pressure.blockSignals(True)
 
-            self.ui.lineEdit_gas_speed.setText(str(gas_speed))
-            self.ui.lineEdit_gas_pressure.setText(str(gas_pressure))
+            self.ui.lineEdit_gas_speed.setText(str(rounded_result))
 
             # Включаем сигнал после изменения значения
             self.ui.lineEdit_gas_speed.blockSignals(False)
-            self.ui.lineEdit_gas_pressure.blockSignals(False)
 
         except ValueError:
-            self.ui.lineEdit_gas_pressure.setText("Ошибка: неверный ввод")
-            self.ui.lineEdit_gas_speed.setText("Ошибка: неверный ввод")
+            self.ui.statusbar.showMessage("Ошибка: неверный ввод")
         except ZeroDivisionError:
-            self.ui.lineEdit_gas_pressure.setText("Ошибка: деление на ноль")
-            self.ui.lineEdit_gas_speed.setText("Ошибка: деление на ноль")
+            self.ui.statusbar.showMessage("Ошибка: деление на ноль")
         except Exception as e:
-            self.ui.lineEdit_gas_pressure.setText(f"Ошибка: {str(e)}")
-            self.ui.lineEdit_gas_speed.setText(f"Ошибка: {str(e)}")
+            self.ui.statusbar.showMessage(f"Ошибка: {str(e)}")
 
-    def calculate_gas_consumption(self, text):
+    def calculated_speed_out(self) -> None:
+        """
+        Метод обработки изменений в поле ввода потребления газа.
+
+        При изменении значения в полях ввода газа и давления газа выполняет расчеты и обновляет
+        соответствующие поля ввода.
+        """
+        """
+        Метод обработки изменений в поле ввода потребления газа.
+
+        При изменении значения в полях ввода газа и давления газа выполняет расчеты и обновляет
+        соответствующие поля ввода.
+        """
         try:
-            gas_pressure = self.ui.lineEdit_gas_pressure.text()
-            pipeline_diameter = self.ui.lineEdit_diametet_of_gas_pipeline.text()
+            gas_consumption = self.ui.input_bandwidth.text()
+            gas_pressure = self.ui.input_POt.text()
+            diametr = self.ui.lineEdit_diametet_of_gas_pipeline_out.text()
 
-            if not gas_pressure or not pipeline_diameter:
+            if not gas_consumption or not gas_pressure:
                 return
 
-            gas_pressure = float(gas_pressure)
-            pipeline_diameter = float(pipeline_diameter)
 
-            if pipeline_diameter <= 0:
-                self.ui.lineEdit_gas_consumption.setText("Ошибка: неверный диаметр")
-                return
+            gas_consumption = float(gas_consumption)
+            gas_pressure = float(gas_pressure)*1000
+            diametr = float(diametr)
 
-            if gas_pressure < 50:
-                gas_speed = 15
-            elif gas_pressure <= 600:
-                gas_speed = 25
-            else:
-                gas_speed = 30
+            # Вычисление скорости газа
+            gas_speed = (gas_consumption * 293) / ((diametr / 0.36238) ** 2 * (0.1 + gas_pressure / 1000))
 
-            # Формула для расчёта расхода газа при данном давлении и диаметре трубопровода
-            gas_consumption = ((pipeline_diameter / 0.36238) ** 2 * (0.1 + gas_pressure / 1000) * gas_speed) / 293
-
+            rounded_result = math.ceil(gas_speed)
 
             # Отключаем сигнал перед изменением значения
-            self.ui.lineEdit_gas_speed.blockSignals(True)
-            self.ui.lineEdit_gas_consumption.blockSignals(True)
+            self.ui.lineEdit_gas_speed_out.blockSignals(True)
 
-            self.ui.lineEdit_gas_speed.setText(str(gas_speed))
-            self.ui.lineEdit_gas_consumption.setText(str(round(gas_consumption, 2)))
+            self.ui.lineEdit_gas_speed_out.setText(str(rounded_result))
 
             # Включаем сигнал после изменения значения
-            self.ui.lineEdit_gas_speed.blockSignals(False)
-            self.ui.lineEdit_gas_consumption.blockSignals(False)
+            self.ui.lineEdit_gas_speed_out.blockSignals(False)
 
         except ValueError:
-            self.ui.lineEdit_gas_consumption.setText("Ошибка: неверный ввод")
-            self.ui.lineEdit_gas_speed.setText("Ошибка: неверный ввод")
+            self.ui.statusbar.showMessage("Ошибка: неверный ввод")
         except ZeroDivisionError:
-            self.ui.lineEdit_gas_consumption.setText("Ошибка: деление на ноль")
-            self.ui.lineEdit_gas_speed.setText("Ошибка: деление на ноль")
+            self.ui.statusbar.showMessage("Ошибка: деление на ноль")
         except Exception as e:
-            self.ui.lineEdit_gas_consumption.setText(f"Ошибка: {str(e)}")
-            self.ui.lineEdit_gas_speed.setText(f"Ошибка: {str(e)}")
-    
+            self.ui.statusbar.showMessage(f"Ошибка: {str(e)}")    
 
     def __drop_area_create(self) -> None:
         # Создаем виджет DropArea и добавляем его в scrollArea_2
@@ -395,7 +477,8 @@ class SelRegulator:
             self.status_text = next(self.status_animation)
             QTimer.singleShot(500, self.status_work_cycle)  # Вызываем себя через 500 мс
         else:
-            self.ui.statusbar.showMessage(self.status_text)
+            pass
+            # self.ui.statusbar.showMessage(self.status_text)
 
     def update_status_worck(self, status_text) -> None:
         """Функция update_status_worck, является обёрткой
@@ -535,7 +618,6 @@ class SelRegulator:
             self.__write_log_wrapper("Регулятор: {}".format(value["Регулятор"]))
             self.__write_log_wrapper("Седло: {}".format(value["Седло"]))
             self.__write_log_wrapper("Пропускная способность регулятора при выбранных параметрах: {}".format(value["Пропускная"]))
-            #self.__write_log_wrapper("Необходимая пропускная способность с учётом +20%: {}".format(value["Необходимая"]))
             self.__write_log_wrapper("Процент загрузки пропускной спос. регулятора c необходимой пропускной способностью ({}) составляет {}%".format(value["Необходимая"],value["Процент"]))
         
 
@@ -785,15 +867,11 @@ class SelRegulator:
         listbox_data = self.drop_area.get_file_paths()
         self.processed_urls = {}
 
-
+        self.__create_path_folder_for_save()
 
         for index in range(len(listbox_data)):
-            print(listbox_data[index])
             if os.path.splitext(listbox_data[index])[1] == '.xlsx':
                 self.processed_urls[listbox_data[index]] = 0
-
-        print(listbox_data)
-        print(self.processed_urls)
 
         if len(self.processed_urls) == 0:
             self.show_error_message("Добавьте файлы xlsx")
@@ -807,73 +885,77 @@ class SelRegulator:
         self.__clear_widget_res_in_app()
 
         for path_file, _ in self.processed_urls.items():
-            if path_file.replace(" ", "") != "":
+            try:
+                if path_file.replace(" ", "") != "":
 
-                try:
-                    PIn = float(self.ui.input_PIn.text().replace(",", '.').replace(" ", ''))
-                    POt = float(self.ui.input_POt.text().replace(",", '.').replace(" ", ''))
-                    bandwidth = float(self.ui.input_bandwidth.text().replace(",", '.'.replace(" ", '')))
-                except:
-                    self.show_error_message("Введите корректные значения для поиска регулятора")
-                    return 
+                    try:
+                        PIn = float(self.ui.input_PIn.text().replace(",", '.').replace(" ", ''))
+                        POt = float(self.ui.input_POt.text().replace(",", '.').replace(" ", ''))
+                        bandwidth = float(self.ui.input_bandwidth.text().replace(",", '.'.replace(" ", '')))
+                    except:
+                        self.show_error_message("Введите корректные значения для поиска регулятора")
+                        return 
 
-                self.__save_patch_in_conf(path_file)
+                    self.__save_patch_in_conf(path_file)
 
-                #self.show_info_message(str("Поиск подходящего регулятора запущен"))
-                self.status_text = "В работе"
-                self.update_status_worck("В работе.")
+                    #self.show_info_message(str("Поиск подходящего регулятора запущен"))
+                    self.status_text = "В работе"
+                    self.update_status_worck("В работе.")
 
-                if PIn != "" and POt!="" and bandwidth!="":
-                    self.__saved_conf_search()
+                    if PIn != "" and POt!="" and bandwidth!="":
+                        self.__saved_conf_search()
 
-                    #Открываем файл экселя
-                    workbook = openpyxl.load_workbook(os.path.normpath(path_file))
+                        #Открываем файл экселя
+                        workbook = openpyxl.load_workbook(os.path.normpath(path_file))
 
-                    #Если не был создан файл логов, создаём его
-                    if not filename_log:
-                        filename_log = self.__res_file_name()
-                        self.logger = FileWriter(filename_log)
-                        self.logger.open_file()
+                        #Если не был создан файл логов, создаём его
+                        if not filename_log:
+                            filename_log = self.__res_file_name()
+                            self.logger = FileWriter(filename_log)
+                            self.logger.open_file()
 
-                    #Пишем в файл лога стартовые данные поиска
-                    self.start_initial_log()
-                    #Запуск функции анализа
-
-                    regulators_found += self.conduct_analysis(workbook, 
-                                                              PIn,
-                                                              POt, 
-                                                              bandwidth)
-
-                    if regulators_found == 0:
-                        self.__write_log_wrapper("Точного совпадения не найдено")
-                        self.__write_log_wrapper("Попытка найти регулятор с близкими параметрами.")
-
-                        #Находим ближайшие допустимые значения
-                        #finding_real_value = FoundCorValue(workbook,PIn,POt)
-                        #PIn,POt = finding_real_value()
+                        #Пишем в файл лога стартовые данные поиска
+                        self.start_initial_log()
+                        #Запуск функции анализа
 
                         regulators_found += self.conduct_analysis(workbook, 
-                                                              PIn,
-                                                              POt, 
-                                                              bandwidth)
-                            
+                                                                PIn,
+                                                                POt, 
+                                                                bandwidth)
 
-                    if regulators_found == 0:
-                        self.__write_log_wrapper("Регуляторы с необходимыми параметрами не найдены.")
+                        if regulators_found == 0:
+                            self.__write_log_wrapper("Точного совпадения не найдено")
+                            self.__write_log_wrapper("Попытка найти регулятор с близкими параметрами.")
+
+                            #Находим ближайшие допустимые значения
+                            #finding_real_value = FoundCorValue(workbook,PIn,POt)
+                            #PIn,POt = finding_real_value()
+
+                            regulators_found += self.conduct_analysis(workbook, 
+                                                                PIn,
+                                                                POt, 
+                                                                bandwidth)
+                                
+
+                        if regulators_found == 0:
+                            self.__write_log_wrapper("Регуляторы с необходимыми параметрами не найдены.")
+                        else:
+                            self.__write_log_wrapper("======================")
+                            self.__write_log_wrapper("Выполнен поиск и найдены регуляторы по входному: {0} и выходному {1} давлению.".format(PIn,POt))
+                            self.__write_log_wrapper("")
+                            self.write_log_found_reg()
+
+                        #self.show_info_message("В файле {0} исправлено: {1} некорректных записей с кириллицей.".format(worck_patch,str(number_change),))
+                        self.__write_log_wrapper("!-!-!-!-!-!-!-!-!-!-!-!-!-!-!-!-!-!-!-!-!-!-!-!-!-")
+                        self.__write_log_wrapper("В файле {0} найдено {1} подходящих регуляторов.".format(path_file,len(self.list_in_range_value)))
+                        self.__write_log_wrapper("!-!-!-!-!-!-!-!-!-!-!-!-!-!-!-!-!-!-!-!-!-!-!-!-!-")
+                        
+                        self.__clear_data_found_device()
                     else:
-                        self.__write_log_wrapper("======================")
-                        self.__write_log_wrapper("Выполнен поиск и найдены регуляторы по входному: {0} и выходному {1} давлению.".format(PIn,POt))
-                        self.__write_log_wrapper("")
-                        self.write_log_found_reg()
+                        self.show_error_message("Введите все входные данные!")
+            except:
+                self.show_error_message(f"Критическая ошибка анализай файла - {path_file}")
 
-                    #self.show_info_message("В файле {0} исправлено: {1} некорректных записей с кириллицей.".format(worck_patch,str(number_change),))
-                    self.__write_log_wrapper("!-!-!-!-!-!-!-!-!-!-!-!-!-!-!-!-!-!-!-!-!-!-!-!-!-")
-                    self.__write_log_wrapper("В файле {0} найдено {1} подходящих регуляторов.".format(path_file,len(self.list_in_range_value)))
-                    self.__write_log_wrapper("!-!-!-!-!-!-!-!-!-!-!-!-!-!-!-!-!-!-!-!-!-!-!-!-!-")
-                    
-                    self.__clear_data_found_device()
-                else:
-                    self.show_error_message("Введите все входные данные!")
 
         # Закрытие логгера
         self.logger.close_file()
@@ -935,28 +1017,47 @@ class SelRegulator:
     def show_about(self):
         """Функция show_about, привязана
         к кнопке верхнего меню (о программе)"""
-        # Логика отображения информации о программе
-        about_window = tk.Toplevel(self.root)
-        about_window.title("О программе")
-        about_window.geometry("800x600")
+        # Создаем диалоговое окно "О программе"
+        about_window = QDialog(self.MainWindow)
+        about_window.setWindowTitle("О программе")
+        about_window.setGeometry(100, 100, 800, 600)
         try:
-            about_window.iconbitmap("icon.ico")
+            about_window.setWindowIcon(QIcon('icon.ico'))
         except:
             pass
-        self.style.configure("Custom.TLabel", font=("Times New Roman", 12), background="white")
         
-        text_widget = tk.Text(about_window, height=30, width=95)
-        text_widget.pack()
-
-        text="Программа подбора регулятора принимает 3 входных параметра: входное давление,\nвыходное давление в МПа и пропускную способность. Для поиска регулятора\nнеобходимо добавить файл в формате xlsx содержащий следующую структуру и данные:\nКаждая новая таблица на отдельном листе. \nЯчейка A1-название регулятора.\nЯчейка В1 седло регулятора. \nА2 размерность выходного давление.\nВ2 размерность выходного давления.\nА4-Аn единицы выходного давления.\nВ3-(N)3 единицы выходного давления.\nЭтапы работы с программой:\n1)Ввести параметры необходимого регулятора.\nЕсли нужно своё название файла результата анализа, \nпоставить флажок 'Своё название результирующего файла' и ввести необходимое название. \n2)Перетащить таблицу формата xlsx с данными о регуляторах в дроп-зону. \nЛибо используя кнопку 'Открыть файл'.\n3)Нажать кнопку 'Подобрать регулятор'.\n4)После того как программа завершить работу, откроется файл с проведённым анализом."
-
-        text_widget.insert(tk.END, text)
-        text_widget.config(state=tk.DISABLED)
-
-        text_widget.pack(pady=20)
-
-        close_button = ttk.Button(about_window, text="Закрыть", command=about_window.destroy)
-        close_button.pack()
+        layout = QVBoxLayout()
+        
+        text_widget = QTextEdit()
+        text_widget.setReadOnly(True)
+        text = ("Программа подбора регулятора принимает 3 входных параметра: входное давление,\n"
+                "выходное давление в МПа и пропускную способность. Для поиска регулятора\n"
+                "необходимо добавить файл в формате xlsx содержащий следующую структуру и данные:\n"
+                "Каждая новая таблица на отдельном листе. \n"
+                "Ячейка A1-название регулятора.\n"
+                "Ячейка В1 седло регулятора. \n"
+                "А2 размерность выходного давление.\n"
+                "В2 размерность выходного давления.\n"
+                "А4-Аn единицы выходного давления.\n"
+                "В3-(N)3 единицы выходного давления.\n"
+                "Этапы работы с программой:\n"
+                "1)Ввести параметры необходимого регулятора.\n"
+                "Если нужно своё название файла результата анализа, \n"
+                "поставить флажок 'Своё название результирующего файла' и ввести необходимое название. \n"
+                "2)Перетащить таблицу формата xlsx с данными о регуляторах в дроп-зону. \n"
+                "Либо используя кнопку 'Открыть файл'.\n"
+                "3)Нажать кнопку 'Подобрать регулятор'.\n"
+                "4)После того как программа завершить работу, откроется файл с проведённым анализом.")
+        text_widget.setText(text)
+        
+        close_button = QPushButton("Закрыть")
+        close_button.clicked.connect(about_window.close)
+        
+        layout.addWidget(text_widget)
+        layout.addWidget(close_button)
+        about_window.setLayout(layout)
+        
+        about_window.exec_()
 
     def __drop_zone_render(self) -> None:
         """Функция __drop_zone_render, рендер
