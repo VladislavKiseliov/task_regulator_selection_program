@@ -23,6 +23,9 @@ class SelRegulator:
         self.data_found = {}
         self.data_found_id = 0
 
+
+        
+
         self.data_conf = {"Path":{}}
         self.status_animation = itertools.cycle(["В работе.", "В работе..", "В работе..."])
 
@@ -34,6 +37,12 @@ class SelRegulator:
         self.MainWindow = QtWidgets.QMainWindow()
         self.ui = Ui_MainWindow()
         self.ui.setupUi(self.MainWindow)
+
+        self.speed_or_diametr = "diametr"
+        self.ui.pushButton_flag_diametr.setCheckable(True)
+        self.ui.pushButton_flag_speed.setCheckable(True)
+        self.ui.pushButton_flag_diametr.setChecked(True)
+        self.ui.pushButton_flag_speed.setChecked(False)
 
         self.change_speed = False
         
@@ -49,6 +58,7 @@ class SelRegulator:
 
         self.__drop_area_create();
         self.__connect_config();
+    
 
     def __connect_config(self) -> None:
         """
@@ -61,6 +71,9 @@ class SelRegulator:
         self.ui.open_button.clicked.connect(self.__open_file_dialog) #Коннект на нажатие кнопки подбора регулятора
         self.ui.remove_button.clicked.connect(self.drop_area.remove_selected_file) #Коннект на нажатие кнопки подбора регулятора
         self.ui.open_folder_button.clicked.connect(self.folder_save_open) # Коннект на нажатие кнопки открытия папки сохранения логов
+
+        self.ui.pushButton_flag_speed.clicked.connect(self.switch_speed)
+        self.ui.pushButton_flag_diametr.clicked.connect(self.switch_diametr)
 
         self.ui.buttom_menu_bar_open.triggered.connect(self.__open_file_dialog)
         self.ui.buttom_menu_bar_exit.triggered.connect(self.MainWindow.close)
@@ -78,9 +91,33 @@ class SelRegulator:
         self.ui.lineEdit_gas_speed_out.editingFinished.connect(self.make_calculation)
         self.ui.lineEdit_diametet_of_gas_pipeline_out.editingFinished.connect(self.make_calculation)
 
-
         self.ui.input_bandwidth.editingFinished.connect(self.make_calculation)
 
+    def get_bandwidth(self) -> float:
+        try:
+            return float(self.ui.input_bandwidth.text().replace(",", '.'.replace(" ", '')))
+        except Exception as e:
+            self.ui.statusbar.showMessage(f"Ошибка: {str(e)}")
+
+    def get_PIn(self) -> float:
+        try:
+            return float(self.ui.input_PIn.text().replace(",", '.'.replace(" ", '')))
+        except Exception as e:
+            self.ui.statusbar.showMessage(f"Ошибка: {str(e)}")
+
+    def get_POut(self) -> float:
+        try:
+            return float(self.ui.input_POt.text().replace(",", '.'.replace(" ", '')))
+        except Exception as e:
+            self.ui.statusbar.showMessage(f"Ошибка: {str(e)}")            
+
+    def switch_diametr(self) -> None:
+        self.speed_or_diametr = "diametr"
+        self.ui.pushButton_flag_speed.setChecked(False)
+
+    def switch_speed(self) -> None:
+        self.speed_or_diametr = "speed"
+        self.ui.pushButton_flag_diametr.setChecked(False)
 
     def make_calculation(self) -> None:
         """
@@ -96,7 +133,7 @@ class SelRegulator:
         Формула для расчёта расхода газа при данном давлении и диаметре трубопровода
         gas_consumption = ((pipeline_diameter / 0.36238) ** 2 * (0.1 + gas_pressure / 1000) * gas_speed) / 293
         """
-        if (self.ui.QCB_male_diam_or_speed.isChecked()):
+        if (self.speed_or_diametr == "diametr"):
             self.calculated_diametr()
             self.calculated_diametr_out()
         else:
@@ -111,8 +148,8 @@ class SelRegulator:
         соответствующие поля ввода.
         """
         try:
-            gas_consumption = self.ui.input_bandwidth.text()
-            gas_pressure = self.ui.input_PIn.text()
+            gas_consumption = self.get_bandwidth()
+            gas_pressure = self.get_PIn()
             gas_speed = self.ui.lineEdit_gas_speed.text()
 
             if not gas_consumption or not gas_pressure:
@@ -163,8 +200,8 @@ class SelRegulator:
         соответствующие поля ввода.
         """
         try:
-            gas_consumption = self.ui.input_bandwidth.text()
-            gas_pressure = self.ui.input_POt.text()
+            gas_consumption = self.get_bandwidth()
+            gas_pressure = self.get_POut()
             gas_speed = self.ui.lineEdit_gas_speed_out.text()
 
             if not gas_consumption or not gas_pressure:
@@ -212,8 +249,8 @@ class SelRegulator:
         соответствующие поля ввода.
         """
         try:
-            gas_consumption = self.ui.input_bandwidth.text()
-            gas_pressure = self.ui.input_PIn.text()
+            gas_consumption = self.get_bandwidth()
+            gas_pressure = self.get_PIn()
             diametr = self.ui.lineEdit_diametet_of_gas_pipeline.text()
 
             if not gas_consumption or not gas_pressure:
@@ -258,8 +295,8 @@ class SelRegulator:
         соответствующие поля ввода.
         """
         try:
-            gas_consumption = self.ui.input_bandwidth.text()
-            gas_pressure = self.ui.input_POt.text()
+            gas_consumption = self.get_bandwidth()
+            gas_pressure = self.get_POut()
             diametr = self.ui.lineEdit_diametet_of_gas_pipeline_out.text()
 
             if not gas_consumption or not gas_pressure:
@@ -547,9 +584,9 @@ class SelRegulator:
             return self.saved_conf_input_name_file+".txt"
 
         # Сборка пути к файлу
-        name_file = "Pвх-{0} Pвых-{1} ПрСп-{2}.txt".format(self.ui.input_PIn.text(), 
-                                                    self.ui.input_POt.text(), 
-                                                    self.ui.input_bandwidth.text())
+        name_file = "Pвх-{0} Pвых-{1} ПрСп-{2}.txt".format(self.get_PIn(), 
+                                                    self.get_POut(), 
+                                                    self.get_bandwidth())
         
         file_path = os.path.join(self.current_dir, self.folder_save_name, name_file)
 
@@ -583,7 +620,7 @@ class SelRegulator:
         """start_initial_log добавляет стартовые данные о сканировании в логи"""
         self.__write_log_wrapper("======================")
         self.__write_log_wrapper("Поиск регуляторов по следущим параметрам: Входное давление-{0} \
-                                 Выходное давление-{1} Пропускная способность-{2}".format(self.ui.input_PIn.text(),self.ui.input_POt.text(), self.ui.input_bandwidth.text()))
+                                 Выходное давление-{1} Пропускная способность-{2}".format(self.get_PIn(),self.get_POut(), self.get_bandwidth()))
         
         if self.saved_conf_left_to_right:
             direct = "справа налево"
@@ -889,9 +926,9 @@ class SelRegulator:
                 if path_file.replace(" ", "") != "":
 
                     try:
-                        PIn = float(self.ui.input_PIn.text().replace(",", '.').replace(" ", ''))
-                        POt = float(self.ui.input_POt.text().replace(",", '.').replace(" ", ''))
-                        bandwidth = float(self.ui.input_bandwidth.text().replace(",", '.'.replace(" ", '')))
+                        PIn = self.get_PIn()
+                        POt = self.get_POut()
+                        bandwidth = self.get_bandwidth()
                     except:
                         self.show_error_message("Введите корректные значения для поиска регулятора")
                         return 
@@ -965,49 +1002,6 @@ class SelRegulator:
         #subprocess.Popen(["notepad.exe", filename_log])
         #subprocess.Popen(f'explorer "{os.path.normpath(os.path.dirname(path_file))}"')
 
-    def __core_render(self) -> None:
-        """Функция __core_render, производит отрисовку
-        основных элементов и фреймов"""
-        self.status_frame = ttk.Frame(self.root, style="TFrame")
-        self.status_frame.pack(fill=tk.X, side=tk.TOP)
-        self.status_label = ttk.Label(self.status_frame, text="Ожидание работы", style="TLabel")
-        self.status_label.pack(pady=10)
-        
-
-        self.update_status_worck("Ожидание работы")
-
-        self.frame = ttk.Frame(self.root, style="TFrame")
-        self.frame.pack(fill=tk.BOTH, expand=True, side=tk.RIGHT)
-
-        self.__create_menu()
-        self.__drop_zone_render()
-
-        #Добавляем в дроп зону пути из сохранений
-        self.__add_load_save_path()
-
-        self.in_data_frame = ttk.Frame(self.root, style="TFrame")
-        self.in_data_frame.pack(side=tk.RIGHT,anchor="n", expand=True)
-
-        self.__input_data_render()
-        self.__button_render()
-
-    def __create_menu(self):
-        """Функция __create_menu, производит отрисовку
-        верхнего меню"""
-        self.menubar = tk.Menu(self.root)
-        self.root.config(menu=self.menubar)
-
-        self.file_menu = tk.Menu(self.menubar, tearoff=0)
-        self.file_menu.add_command(label="Открыть", command=self.open_file)
-        self.file_menu.add_separator()
-        self.file_menu.add_command(label="Выход", command=self.root.quit)
-
-        self.help_menu = tk.Menu(self.menubar, tearoff=0)
-        self.help_menu.add_command(label="О программе", command=self.show_about)
-
-        self.menubar.add_cascade(label="Файл", menu=self.file_menu)
-        self.menubar.add_cascade(label="Помощь", menu=self.help_menu)
-
     def open_file(self):
         """Функция open_file, привязана
         к кнопке верхнего меню (окрыть)"""
@@ -1059,108 +1053,6 @@ class SelRegulator:
         
         about_window.exec_()
 
-    def __drop_zone_render(self) -> None:
-        """Функция __drop_zone_render, рендер
-        дроп зоны и виджета статуса работы"""        
-        self.lb = tk.Listbox(self.frame, width=30, height=5)
-        self.lb.insert(1, "Перетащите xlsx таблицу с данными о регуляторах")
-        self.lb.configure(justify=tk.CENTER)
-        self.lb.drop_target_register(DND_FILES)
-        self.lb.dnd_bind('<<Drop>>', self.__file_placed_drop_zone)
-        self.lb.pack(fill=tk.BOTH, expand=True, side=tk.TOP)
-
-
-        #Виджет отображения результатов поиска 
-        self.text_widget_res = tk.Text(self.frame, height=30, width=67)
-        self.text_widget_res.pack()
-
-        text="Ожидание начала подбора..."
-
-        self.text_widget_res.insert(tk.END, text)
-        self.text_widget_res.config(state=tk.DISABLED)
-
-        self.text_widget_res.pack(fill=tk.BOTH, expand=True, side=tk.BOTTOM)
-
-    def __input_data_render(self) -> None:
-        """Функция __input_data_render, рендер
-        элементов ввода и конфигурации поиска регулятора"""  
-                
-        self.label_PIn = ttk.Label(self.in_data_frame, text="Входное давление - Рвх МПа:", style="TLabel")
-        self.label_PIn.grid(row=0, column=0, pady=3)
-
-        self.input_PIn = ttk.Entry(self.in_data_frame)
-        self.input_PIn.grid(row=1, column=0,sticky="ew",padx=(10))
-
-        self.label_POt = ttk.Label(self.in_data_frame, text="Выходное давление - Рвых МПа:", style="TLabel")
-        self.label_POt.grid(row=2, column=0, pady=3)
-
-        self.input_POt = ttk.Entry(self.in_data_frame)
-        self.input_POt.grid(row=3, column=0,sticky="ew",padx=(10))
-
-        self.label_bandwidth = ttk.Label(self.in_data_frame, text="Пропускная способность", style="TLabel")
-        self.label_bandwidth.grid(row=4, column=0, pady=3)
-
-        self.input_bandwidth = ttk.Entry(self.in_data_frame)
-        self.input_bandwidth.grid(row=5, column=0, pady=(0,10),sticky="ew",padx=(10))
-        
-        #Показать регуляторы с загрузкой от - до
-        self.lebel_loading_range = ttk.Label(self.in_data_frame, text="Диапазон процента загрузки:", style="TLabel")
-        self.lebel_loading_range.grid(row=6, column=0, pady=3)
-
-        self.frame_loading_range = ttk.Frame(self.in_data_frame, style="TFrame")
-        self.frame_loading_range.grid(row=7, column=0, pady=3)
-
-        self.min_lebel_loading_range = ttk.Label(self.frame_loading_range, text="Min % :", style="TLabel")
-        self.min_lebel_loading_range.pack(side="left")
-
-        self.minimum_load = ttk.Entry(self.frame_loading_range, width=10)
-        self.minimum_load.pack(side="left")
-        self.minimum_load.insert(0, "20")
-
-        self.max_lebel_loading_range = ttk.Label(self.frame_loading_range, text="- Max % :", style="TLabel")
-        self.max_lebel_loading_range.pack(side="left")
-
-        self.maximum_load = ttk.Entry(self.frame_loading_range, width=10)
-        self.maximum_load.pack(side="left")
-        self.maximum_load.insert(0, "100")
-        ###
-
-        self.label_name = ttk.Label(self.in_data_frame, text="Название файла:", style="TLabel")
-        self.label_name.grid(row=8, column=0, pady=(20,0))
-
-        self.self_file_name_var = tk.BooleanVar()
-        self.checkbox = ttk.Checkbutton(self.in_data_frame, text="Своё название результирующего файла", variable=self.self_file_name_var, style="TCheckbutton")
-        self.checkbox.grid(row=9, column=0, pady=(0,10),sticky="ew",padx=(10))
-
-        self.input_name_file = ttk.Entry(self.in_data_frame)
-        self.input_name_file.grid(row=10, column=0, pady=(0,10),sticky="ew",padx=(10))
-
-        self.left_to_right = tk.BooleanVar()
-        self.checkbox = ttk.Checkbutton(self.in_data_frame, text="Регуляторы справа налево\n (по умолчанию слева направо)", variable=self.left_to_right, style="TCheckbutton")
-        self.checkbox.grid(row=11, column=0, pady=(0,10),sticky="ew",padx=(10))
-
-        self.PZK_position_sensor = tk.BooleanVar()
-        self.checkbox = ttk.Checkbutton(self.in_data_frame, text="Датчик положения ПЗК", variable=self.PZK_position_sensor, style="TCheckbutton")
-        self.checkbox.grid(row=12, column=0, pady=(0,10),sticky="ew",padx=(10))
-
-        self.Regulator_for_liquefied_gas = tk.BooleanVar()
-        self.checkbox = ttk.Checkbutton(self.in_data_frame, text="Регулятор для сжиженного газа", variable=self.Regulator_for_liquefied_gas, style="TCheckbutton")
-        self.checkbox.grid(row=13, column=0, pady=(0,10),sticky="ew",padx=(10))
-
-    def __button_render(self) -> None:
-        """Функция __button_render, рендер
-        рабочих кнопок""" 
-        self.select_button = ttk.Button(self.in_data_frame, text="Подобрать регулятор", command=self.replacement_button_pressed, style="TButton")
-        self.select_button.grid(row=14, column=0, pady=5)
-
-        self.open_button = ttk.Button(self.in_data_frame, text="Загрузить файл", command=self.__open_file_dialog, style="TButton")
-        self.open_button.grid(row=15, column=0, pady=5)
-
-        self.remove_button = ttk.Button(self.in_data_frame, text="Удалить", command=self.remove_button_pressed, style="TButton")
-        self.remove_button.grid(row=16, column=0, pady=5)
-
-        self.open_folder_button = ttk.Button(self.in_data_frame, text="Открыть папку логов", command=self.folder_save_open, style="TButton")
-        self.open_folder_button.grid(row=17, column=0, pady=5)
 
     def draw_window(self) -> None:
         """

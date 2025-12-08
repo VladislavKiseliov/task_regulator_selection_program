@@ -1,4 +1,6 @@
 from imports import *
+
+
 class DropArea(QListWidget):
     def __init__(self, parent=None):
         super().__init__(parent)
