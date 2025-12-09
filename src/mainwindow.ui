@@ -54,6 +54,7 @@
         <height>16777215</height>
        </size>
       </property>
+
       <property name="font">
        <font>
         <pointsize>11</pointsize>
@@ -1583,6 +1584,7 @@ QGroupBox::indicator:checked {
       </widget>
      </widget>
     </item>
+
     <item>
      <widget class="QWidget" name="widget_2" native="true">
       <property name="minimumSize">
