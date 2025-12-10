@@ -22,9 +22,8 @@ class SelRegulator:
         self.data = {}
         self.data_found = {}
         self.data_found_id = 0
-
-
-        
+        self.selected_product_type = None  # Для хранения выбранного типа изделия
+        self.gas_equipment_config = None  # Для хранения конфигурации газового оборудования
 
         self.data_conf = {"Path":{}}
         self.status_animation = itertools.cycle(["В работе.", "В работе..", "В работе..."])
@@ -67,31 +66,176 @@ class SelRegulator:
         Устанавливает соответствия между событиями пользовательского интерфейса
         и методами класса SelRegulator.
         """
+        # Кнопка "Подобрать регулятор" - вызывает метод replacement_button_pressed
         self.ui.select_button.clicked.connect(self.replacement_button_pressed) #Коннект на нажатие кнопки подбора регулятора
-        self.ui.open_button.clicked.connect(self.__open_file_dialog) #Коннект на нажатие кнопки подбора регулятора
-        self.ui.remove_button.clicked.connect(self.drop_area.remove_selected_file) #Коннект на нажатие кнопки подбора регулятора
-        self.ui.open_folder_button.clicked.connect(self.folder_save_open) # Коннект на нажатие кнопки открытия папки сохранения логов
 
+        # Кнопка "Открыть файл" - вызывает метод __open_file_dialog
+        self.ui.open_button.clicked.connect(self.__open_file_dialog) #Коннект на нажатие кнопки подбора регулятора
+
+        # Кнопка "Удалить" - вызывает метод remove_selected_file у drop_area
+        self.ui.remove_button.clicked.connect(self.drop_area.remove_selected_file) #Коннект на нажатие кнопки подбора регулятора
+
+        # Кнопка "Открыть папку сохранения логов" - вызывает метод folder_save_open
+        # self.ui.open_folder_button.clicked.connect(self.folder_save_open) # Коннект на нажатие кнопки открытия папки сохранения логов
+
+        # Кнопка переключения режима "Скорость" - вызывает метод switch_speed
         self.ui.pushButton_flag_speed.clicked.connect(self.switch_speed)
+
+        # Кнопка переключения режима "Диаметр" - вызывает метод switch_diametr
         self.ui.pushButton_flag_diametr.clicked.connect(self.switch_diametr)
 
+        # Пункт меню "Открыть" - вызывает метод __open_file_dialog
         self.ui.buttom_menu_bar_open.triggered.connect(self.__open_file_dialog)
+
+        # Пункт меню "Выход" - закрывает главное окно
         self.ui.buttom_menu_bar_exit.triggered.connect(self.MainWindow.close)
+
+        # Пункт меню "Помощь" - вызывает метод show_about
         self.action_menu_2.triggered.connect(self.show_about)
 
+        # Кнопка "Выполнить расчет" - вызывает метод make_calculation
         self.ui.pushButton_make_calculation.clicked.connect(self.make_calculation)
 
+        # Кнопка "Подобрать изделие" - вызывает метод select_product_type
+        self.ui.select_product_button.clicked.connect(self.select_product_type)
+
         #Подключение событий изменения текста в полях калькулятора
+
+        # При завершении редактирования поля ввода входного давления вызывается make_calculation
         self.ui.input_PIn.editingFinished.connect(self.make_calculation)
+
+        # При завершении редактирования поля ввода скорости газа вызывается make_calculation
         self.ui.lineEdit_gas_speed.editingFinished.connect(self.make_calculation)
+
+        # При завершении редактирования поля ввода диаметра газопровода вызывается make_calculatio
         self.ui.lineEdit_diametet_of_gas_pipeline.editingFinished.connect(self.make_calculation)
 
         #Подключение событий изменения текста в полях калькулятора выходного газопровода
+
+        # При завершении редактирования поля ввода выходного давления вызывается make_calculation
         self.ui.input_POt.editingFinished.connect(self.make_calculation)
+
+        # При завершении редактирования поля ввода скорости газа на выходе вызывается make_calculation
         self.ui.lineEdit_gas_speed_out.editingFinished.connect(self.make_calculation)
+
+        # При завершении редактирования поля ввода диаметра газопровода на выходе вызывается make_calculation
         self.ui.lineEdit_diametet_of_gas_pipeline_out.editingFinished.connect(self.make_calculation)
 
+        # При завершении редактирования поля ввода пропускной способности вызывается make_calculation
         self.ui.input_bandwidth.editingFinished.connect(self.make_calculation)
+
+    def get_count_work_line(self):
+        """
+            Получить количество рабочих линий
+        """
+        try:
+            return int(self.ui.input_count_work_line.text())
+        except Exception as e:
+            self.ui.statusbar.showMessage(f"Ошибка: {str(e)}")
+
+    def get_backup_lines(self):
+        """
+            Получить количество резервных линий
+        """
+        try:
+            return int(self.ui.input_backup_lines.text())
+        except Exception as e:
+            self.ui.statusbar.showMessage(f"Ошибка: {str(e)}")
+
+    def get_removable_backup_line(self):
+        """
+            Получить наличие съемной резервной линии
+        """
+        return self.ui.checkbox_removable_backup_line.isChecked()
+
+    def get_sto_gprg_execution(self):
+        """
+            Получить исполнение по СТО ГПРГ
+        """
+        return self.ui.checkbox_sto_gprg_execution.isChecked()
+
+    def get_heating(self):
+        """
+            Получить обогрев
+        """
+        return self.ui.checkbox_heating.isChecked()
+
+    def get_telemetry(self):
+        """
+            Получить телеметрию
+        """
+        return self.ui.checkbox_telemetry.isChecked()
+
+    def get_climate_execution(self):
+        """
+            Получить климатическое исполнение
+        """
+        return self.ui.combo_climate_execution.currentText()
+
+    def get_uirg_equipment(self):
+        """
+            Получить оснащение УИРГ
+        """
+        return self.ui.checkbox_uirg_equipment.isChecked()
+
+    def get_number_of_gas_pipeline_outlets(self):
+        """
+            Получить количество выходов газопроводов
+        """
+        try:
+            return int(self.ui.input_number_of_gas_pipeline_outlets.text())
+        except Exception as e:
+            self.ui.statusbar.showMessage(f"Ошибка: {str(e)}")
+
+    def get_inlet_valve_diameter(self):
+        """
+            Получить диаметр запорной арматуры на входе
+        """
+        try:
+            return float(self.ui.input_inlet_valve_diameter.text().replace(",", '.'))
+        except Exception as e:
+            self.ui.statusbar.showMessage(f"Ошибка: {str(e)}")
+
+    def get_outlet_valve_diameter(self):
+        """
+            Получить диаметр запорной арматуры на выходе
+        """
+        try:
+            return float(self.ui.input_outlet_valve_diameter.text().replace(",", '.'))
+        except Exception as e:
+            self.ui.statusbar.showMessage(f"Ошибка: {str(e)}")
+
+    def get_direction(self):
+        """
+            Получить направление
+        """
+        return self.ui.combo_direction.currentText()
+
+    def get_direction_type(self):
+        """
+            Получить тип направления
+        """
+        return self.ui.radioButton_direction_lp.isChecked()
+
+
+    def get_uirg_equipment_type(self):
+        """
+            Получить тип оснащения УИРГ
+        """
+        return self.ui.radioButton_uirg_sg.isChecked()
+
+    def get_telemetry_type(self):
+        """
+            Получить тип телеметрии
+        """
+        return self.ui.radioButton_telemetry_t.isChecked()
+
+
+    def get_heating_type(self):
+        """
+            Получить тип обогрева
+        """
+        return self.ui.radioButton_heating_og.isChecked()
 
     def get_bandwidth(self) -> float:
         try:
@@ -616,30 +760,69 @@ class SelRegulator:
                                                "Необходимая":need_bandwidth,
                                                "Процент":"{:.2f}".format(100-(((int(found_bandwidth)-int(need_bandwidth))/int(found_bandwidth))*100))}
         
+    def select_product_type(self) -> None:
+        """
+        Метод для обработки выбора типа изделия (ГРПБ, ГРПШ, ГРУ).
+        Собирает данные о выбранном типе изделия и сохраняет их.
+        """
+        # Получаем выбранный тип изделия из комбо-бокса
+        selected_product = self.ui.comboBox_product_type.currentText()
+        
+        # Сохраняем информацию о выбранном типе изделия
+        self.selected_product_type = selected_product
+        
+        # Собираем дополнительную информацию о конфигурации газового оборудования
+        gas_equipment_config = {
+            "Тип изделия": selected_product,
+            "Количество рабочих линий": self.ui.spinBox_working_lines.value(),
+            "Количество резервных линий": self.ui.spinBox_reserve_lines.value(),
+            "Наличие съемной резервной линии": self.ui.spinBox_removable_reserve.value(),
+            "Исполнение по СТО ГПРГ": self.ui.comboBox_sto_gprg.currentText(),
+            "Обогрев": self.get_heating_type(),
+            "Телеметрия": self.get_telemetry_type(),
+            "Климатическое исполнение": self.ui.comboBox_climate.currentText(),
+            "Оснащение УИРГ": self.get_uirg_equipment_type(),
+            "Количество выходов газопроводов": self.ui.spinBox_gas_outputs.value(),
+            "Диаметр запорной арматуры на входе": self.ui.lineEdit_valve_diameter_in.text(),
+            "Диаметр запорной арматуры на выходе": self.ui.lineEdit_valve_diameter_out.text(),
+            "Направление": self.get_direction_type()
+        }
+        
+        # Сохраняем всю конфигурацию
+        self.gas_equipment_config = gas_equipment_config
+        
+        # Выводим сообщение в строке состояния
+        # self.ui.statusbar.showMessage(f"Выбран тип изделия: {selected_product}", 3000)
+
+        print(f"{gas_equipment_config=}")
+
+        
+        # Здесь можно добавить дополнительную логику обработки выбранного типа изделия
+        # Например, изменение интерфейса в зависимости от выбранного типа
+        
     def start_initial_log(self) -> None:
         """start_initial_log добавляет стартовые данные о сканировании в логи"""
         self.__write_log_wrapper("======================")
-        self.__write_log_wrapper("Поиск регуляторов по следущим параметрам: Входное давление-{0} \
+        self.__write_log_wrapper("Поиск регуляторов по следующим параметрам: Входное давление-{0} \
                                  Выходное давление-{1} Пропускная способность-{2}".format(self.get_PIn(),self.get_POut(), self.get_bandwidth()))
         
+        # Добавляем информацию о выбранном типе изделия в лог, если она есть
+        if hasattr(self, 'selected_product_type') and self.selected_product_type:
+            self.__write_log_wrapper(f"Тип изделия: {self.selected_product_type}")
+            
+        # Добавляем информацию о конфигурации газового оборудования в лог, если она есть
+        if hasattr(self, 'gas_equipment_config') and self.gas_equipment_config:
+            self.__write_log_wrapper("Конфигурация газового оборудования:")
+            for key, value in self.gas_equipment_config.items():
+                self.__write_log_wrapper(f"  {key}: {value}")
+         
         if self.saved_conf_left_to_right:
             direct = "справа налево"
         else:
             direct = "слева направо"
-
-        if self.saved_conf_PZK_position_sensor:
-            PZK = "есть ПЗК"
-        else:
-            PZK = "нету ПЗК"
-
-        if self.saved_conf_Regulator_for_liquefied_gas:
-            liquefied_gas = "Регулятор для сжиженного газа."
-        else:
-            liquefied_gas = "Регулятор для сетевого газа."
-        
-        self.__write_log_wrapper("{} Направление регулятора {}. Наличие датчика положения ПЗК: {}.".format(liquefied_gas,direct,PZK))
-        
-
+            
+        self.__write_log_wrapper("Направление: {0}".format(direct))
+        self.__write_log_wrapper("======================")
     def write_log_found_reg(self) -> int:
         """Функция write_log_found_reg, записывает
         в файл для логирования все найденные девайсы
@@ -985,7 +1168,7 @@ class SelRegulator:
                         #self.show_info_message("В файле {0} исправлено: {1} некорректных записей с кириллицей.".format(worck_patch,str(number_change),))
                         self.__write_log_wrapper("!-!-!-!-!-!-!-!-!-!-!-!-!-!-!-!-!-!-!-!-!-!-!-!-!-")
                         self.__write_log_wrapper("В файле {0} найдено {1} подходящих регуляторов.".format(path_file,len(self.list_in_range_value)))
-                        self.__write_log_wrapper("!-!-!-!-!-!-!-!-!-!-!-!-!-!-!-!-!-!-!-!-!-!-!-!-!-")
+                        self.__write_log_wrapper("!-!-!-!-!-!-!-!-!-!-!-!-!-!-!-!-!-!-!-!-!-!-!--!")
                         
                         self.__clear_data_found_device()
                     else:
@@ -1024,6 +1207,12 @@ class SelRegulator:
         
         text_widget = QTextEdit()
         text_widget.setReadOnly(True)
+        
+        # Увеличиваем размер шрифта для лучшей читаемости
+        font = text_widget.font()
+        font.setPointSize(12)  # Увеличиваем размер шрифта с обычного до 12
+        text_widget.setFont(font)
+        
         text = ("Программа подбора регулятора принимает 3 входных параметра: входное давление,\n"
                 "выходное давление в МПа и пропускную способность. Для поиска регулятора\n"
                 "необходимо добавить файл в формате xlsx содержащий следующую структуру и данные:\n"
