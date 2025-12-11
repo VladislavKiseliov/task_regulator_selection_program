@@ -1,3 +1,5 @@
+from typing import Callable, Union
+import utils.MathMethod as MathMethod
 from imports import *
 
 class SelRegulator:
@@ -283,193 +285,146 @@ class SelRegulator:
         else:
             self.calculated_speed_in()
             self.calculated_speed_out()
+
+    def __calculate_gas_pipeline_params(self,
+                                      get_pressure_func: Callable[[], Union[str, float, None]],
+                                      diametr_line_edit,
+                                      speed_line_edit,
+                                      auto_speed_checkbox) -> None:
+        """
+        Обобщенный метод для расчета параметров газопровода (Вход или Выход).
+
+        Args:
+            get_pressure_func: Функция для получения значения давления (PIn или POut).
+            diametr_line_edit: Объект QLineEdit для диаметра.
+            speed_line_edit: Объект QLineEdit для скорости.
+            auto_speed_checkbox: Объект QCheckBox для автоматического выбора скорости.
+        """
+        try:
+            gas_consumption = self.get_bandwidth()  # Предполагаем, что эта функция общая
+            gas_pressure = get_pressure_func()
+            gas_speed = speed_line_edit.text()
+
+            if not gas_consumption or not gas_pressure:
+                return
+
+            # Конвертация и масштабирование
+            gas_consumption = float(gas_consumption)
+            # Умножаем на 1000 для перевода МПа в кПа (как в исходном коде)
+            gas_pressure_kpa = float(gas_pressure) * 1000
+
+            # Логика автоматического выбора скорости
+            if auto_speed_checkbox.isChecked():
+                if gas_pressure_kpa < 50:
+                    gas_speed = 15.0
+                elif 50 <= gas_pressure_kpa <= 600:
+                    gas_speed = 25.0
+                else:
+                    gas_speed = 30.0
+
+            gas_speed = float(gas_speed)
+
+            # Вызов чистой функции расчета
+            rounded_result = MathMethod.calculate_diameter(gas_consumption, gas_pressure_kpa, gas_speed)
+
+            # --- Обновление GUI с блокировкой сигналов ---
+            # Отключаем сигналы перед изменением
+            diametr_line_edit.blockSignals(True)
+            speed_line_edit.blockSignals(True)
+
+            diametr_line_edit.setText(str(rounded_result))
+            # Форматируем скорость до одного знака после запятой для вывода
+            speed_line_edit.setText(f"{gas_speed:.1f}")
+
+            # Включаем сигналы после изменения
+            diametr_line_edit.blockSignals(False)
+            speed_line_edit.blockSignals(False)
+
+        except ValueError:
+            self.ui.statusbar.showMessage("Ошибка: неверный ввод. Проверьте числовые поля.")
+        except ZeroDivisionError:
+            self.ui.statusbar.showMessage("Ошибка: деление на ноль.")
+        except Exception as e:
+            self.ui.statusbar.showMessage(f"Неизвестная ошибка: {str(e)}")
     
     def calculated_diametr(self) -> None:
-        """
-        Метод обработки изменений в поле ввода потребления газа.
-
-        При изменении значения в полях ввода газа и давления газа выполняет расчеты и обновляет
-        соответствующие поля ввода.
-        """
-        try:
-            gas_consumption = self.get_bandwidth()
-            gas_pressure = self.get_PIn()
-            gas_speed = self.ui.lineEdit_gas_speed.text()
-
-            if not gas_consumption or not gas_pressure:
-                return
-
-
-            gas_consumption = float(gas_consumption)
-            gas_pressure = float(gas_pressure)*1000
-
-            if (self.ui.QCB_Auto_Speed_In.isChecked()):
-                if gas_pressure < 50:
-                    gas_speed = 15
-                elif 50<=gas_pressure<=600:
-                    gas_speed = 25
-                else:
-                    gas_speed = 30
-            
-            gas_speed = float(gas_speed)
-
-            
-
-            result = (0.036238) * math.sqrt(gas_consumption * 293 / (0.1 + gas_pressure / 1000) / gas_speed) * 10
-            rounded_result = math.ceil(result)
-
-            # Отключаем сигнал перед изменением значения
-            self.ui.lineEdit_diametet_of_gas_pipeline.blockSignals(True)
-            self.ui.lineEdit_gas_speed.blockSignals(True)
-
-            self.ui.lineEdit_diametet_of_gas_pipeline.setText(str(rounded_result))
-            self.ui.lineEdit_gas_speed.setText(str(gas_speed))
-
-            # Включаем сигнал после изменения значения
-            self.ui.lineEdit_diametet_of_gas_pipeline.blockSignals(False)
-            self.ui.lineEdit_gas_speed.blockSignals(False)
-
-        except ValueError:
-            self.ui.statusbar.showMessage("Ошибка: неверный ввод")
-        except ZeroDivisionError:
-            self.ui.statusbar.showMessage("Ошибка: деление на ноль")
-        except Exception as e:
-            self.ui.statusbar.showMessage(f"Ошибка: {str(e)}")
+        """Слот для ВХОДНОГО газопровода."""
+        self.__calculate_gas_pipeline_params(
+            get_pressure_func=self.get_PIn,
+            diametr_line_edit=self.ui.lineEdit_diametet_of_gas_pipeline,
+            speed_line_edit=self.ui.lineEdit_gas_speed,
+            auto_speed_checkbox=self.ui.QCB_Auto_Speed_In
+        )
 
     def calculated_diametr_out(self) -> None:
-        """
-        Метод обработки изменений в поле ввода потребления газа.
+        """Слот для ВЫХОДНОГО газопровода."""
+        self.__calculate_gas_pipeline_params(
+            get_pressure_func=self.get_POut,
+            diametr_line_edit=self.ui.lineEdit_diametet_of_gas_pipeline_out,
+            speed_line_edit=self.ui.lineEdit_gas_speed_out,
+            auto_speed_checkbox=self.ui.QCB_Auto_Speed_Out
+        )
 
-        При изменении значения в полях ввода газа и давления газа выполняет расчеты и обновляет
-        соответствующие поля ввода.
+    def calculate_gas_speed(self,
+                            get_pressure_func: Callable[[], Union[str, float, None]],
+                            diametr_line_edit,
+                            speed_line_edit) -> None:
+        """
+        Обобщенный метод для расчета скорости газа (Вход или Выход).
+
+        Args:
+            get_pressure_func: Функция для получения значения давления (PIn или POut).
+            diametr_line_edit: Объект QLineEdit для диаметра.
+            speed_line_edit: Объект QLineEdit для скорости, которую нужно обновить.
         """
         try:
-            gas_consumption = self.get_bandwidth()
-            gas_pressure = self.get_POut()
-            gas_speed = self.ui.lineEdit_gas_speed_out.text()
+            gas_consumption = self.get_bandwidth()  # Предполагаем, что эта функция общая
+            gas_pressure = get_pressure_func()
+            diametr = diametr_line_edit.text()
 
-            if not gas_consumption or not gas_pressure:
+            if not gas_consumption or not gas_pressure or not diametr:
                 return
 
+            # Конвертация и масштабирование
             gas_consumption = float(gas_consumption)
-            gas_pressure = float(gas_pressure)*1000
+            # Умножаем на 1000 для перевода МПа в кПа
+            gas_pressure_kpa = float(gas_pressure) * 1000
+            diametr = float(diametr)
 
-            if (self.ui.QCB_Auto_Speed_Out.isChecked()):
-                if gas_pressure < 50:
-                    gas_speed = 15
-                elif 50<=gas_pressure<=600:
-                    gas_speed = 25
-                else:
-                    gas_speed = 30
-            
-            gas_speed = float(gas_speed)
+            # Вызов чистой функции расчета
+            rounded_result_speed = MathMethod.calculate_speed(gas_consumption, gas_pressure_kpa, diametr)
 
-            result = (0.036238) * math.sqrt(gas_consumption * 293 / (0.1 + gas_pressure / 1000) / gas_speed) * 10
-            rounded_result = math.ceil(result)
-
+            # --- Обновление GUI с блокировкой сигналов ---
             # Отключаем сигнал перед изменением значения
-            self.ui.lineEdit_diametet_of_gas_pipeline_out.blockSignals(True)
-            self.ui.lineEdit_gas_speed_out.blockSignals(True)
+            speed_line_edit.blockSignals(True)
 
-            self.ui.lineEdit_diametet_of_gas_pipeline_out.setText(str(rounded_result))
-            self.ui.lineEdit_gas_speed_out.setText(str(gas_speed))
+            speed_line_edit.setText(str(rounded_result_speed))
 
             # Включаем сигнал после изменения значения
-            self.ui.lineEdit_diametet_of_gas_pipeline_out.blockSignals(False)
-            self.ui.lineEdit_gas_speed_out.blockSignals(False)
+            speed_line_edit.blockSignals(False)
 
         except ValueError:
-            self.ui.statusbar.showMessage("Ошибка: неверный ввод")
+            self.ui.statusbar.showMessage("Ошибка: неверный ввод. Проверьте числовые поля.")
         except ZeroDivisionError:
-            self.ui.statusbar.showMessage("Ошибка: деление на ноль")
+            self.ui.statusbar.showMessage("Ошибка: деление на ноль.")
         except Exception as e:
-            self.ui.statusbar.showMessage(f"Ошибка: {str(e)}")
+            self.ui.statusbar.showMessage(f"Неизвестная ошибка: {str(e)}")
 
     def calculated_speed_in(self) -> None:
-        """
-        Метод обработки изменений в поле ввода потребления газа.
-
-        При изменении значения в полях ввода газа и давления газа выполняет расчеты и обновляет
-        соответствующие поля ввода.
-        """
-        try:
-            gas_consumption = self.get_bandwidth()
-            gas_pressure = self.get_PIn()
-            diametr = self.ui.lineEdit_diametet_of_gas_pipeline.text()
-
-            if not gas_consumption or not gas_pressure:
-                return
-
-
-            gas_consumption = float(gas_consumption)
-            gas_pressure = float(gas_pressure)*1000
-            diametr = float(diametr)
-
-            # Вычисление скорости газа
-            gas_speed = (gas_consumption * 293) / ((diametr / 0.36238) ** 2 * (0.1 + gas_pressure / 1000))
-
-            rounded_result = math.ceil(gas_speed)
-
-            # Отключаем сигнал перед изменением значения
-            self.ui.lineEdit_gas_speed.blockSignals(True)
-
-            self.ui.lineEdit_gas_speed.setText(str(rounded_result))
-
-            # Включаем сигнал после изменения значения
-            self.ui.lineEdit_gas_speed.blockSignals(False)
-
-        except ValueError:
-            self.ui.statusbar.showMessage("Ошибка: неверный ввод")
-        except ZeroDivisionError:
-            self.ui.statusbar.showMessage("Ошибка: деление на ноль")
-        except Exception as e:
-            self.ui.statusbar.showMessage(f"Ошибка: {str(e)}")
+        """Слот, вызываемый по изменению диаметра на ВХОДЕ."""
+        self.calculate_gas_speed(
+            get_pressure_func=self.get_PIn,
+            diametr_line_edit=self.ui.lineEdit_diametet_of_gas_pipeline,
+            speed_line_edit=self.ui.lineEdit_gas_speed
+        )
 
     def calculated_speed_out(self) -> None:
-        """
-        Метод обработки изменений в поле ввода потребления газа.
-
-        При изменении значения в полях ввода газа и давления газа выполняет расчеты и обновляет
-        соответствующие поля ввода.
-        """
-        """
-        Метод обработки изменений в поле ввода потребления газа.
-
-        При изменении значения в полях ввода газа и давления газа выполняет расчеты и обновляет
-        соответствующие поля ввода.
-        """
-        try:
-            gas_consumption = self.get_bandwidth()
-            gas_pressure = self.get_POut()
-            diametr = self.ui.lineEdit_diametet_of_gas_pipeline_out.text()
-
-            if not gas_consumption or not gas_pressure:
-                return
-
-
-            gas_consumption = float(gas_consumption)
-            gas_pressure = float(gas_pressure)*1000
-            diametr = float(diametr)
-
-            # Вычисление скорости газа
-            gas_speed = (gas_consumption * 293) / ((diametr / 0.36238) ** 2 * (0.1 + gas_pressure / 1000))
-
-            rounded_result = math.ceil(gas_speed)
-
-            # Отключаем сигнал перед изменением значения
-            self.ui.lineEdit_gas_speed_out.blockSignals(True)
-
-            self.ui.lineEdit_gas_speed_out.setText(str(rounded_result))
-
-            # Включаем сигнал после изменения значения
-            self.ui.lineEdit_gas_speed_out.blockSignals(False)
-
-        except ValueError:
-            self.ui.statusbar.showMessage("Ошибка: неверный ввод")
-        except ZeroDivisionError:
-            self.ui.statusbar.showMessage("Ошибка: деление на ноль")
-        except Exception as e:
-            self.ui.statusbar.showMessage(f"Ошибка: {str(e)}")    
+        """Слот, вызываемый по изменению диаметра на ВЫХОДЕ."""
+        self.calculate_gas_speed(
+            get_pressure_func=self.get_POut,
+            diametr_line_edit=self.ui.lineEdit_diametet_of_gas_pipeline_out,
+            speed_line_edit=self.ui.lineEdit_gas_speed_out
+        )
 
     def __drop_area_create(self) -> None:
         # Создаем виджет DropArea и добавляем его в scrollArea_2
@@ -823,6 +778,7 @@ class SelRegulator:
             
         self.__write_log_wrapper("Направление: {0}".format(direct))
         self.__write_log_wrapper("======================")
+
     def write_log_found_reg(self) -> int:
         """Функция write_log_found_reg, записывает
         в файл для логирования все найденные девайсы
