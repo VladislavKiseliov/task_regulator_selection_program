@@ -33,3 +33,7 @@ def calculate_speed(gas_consumption: float, gas_pressure_kpa: float, diameter_mm
     gas_speed = numerator / denominator
 
     return math.ceil(gas_speed)  # Округление до следующего целого
+
+
+def calculate_diameter(gas_consumption, gas_pressure_kpa, gas_speed):
+    return None

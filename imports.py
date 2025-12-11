@@ -37,6 +37,7 @@ from src.FoundCorValue import FoundCorValue
 from src.DropArea import DropArea
 from src.MyLogger import FileWriter
 from src.MiniFunc import calculate_hash, get_excel_column
+from src.utils import *
 
 
 # Список для экспорта

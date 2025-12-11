@@ -1470,83 +1470,38 @@ QGroupBox::indicator:checked {
            <item>
             <layout class="QHBoxLayout" name="horizontalLayout_direction">
              <item>
-              <widget class="QRadioButton" name="radioButton_direction_lp">
-               <property name="font">
-                <font>
-                 <pointsize>10</pointsize>
-                </font>
+              <widget class="QComboBox" name="comboBox_direction">
+               <property name="minimumSize">
+                <size>
+                 <width>0</width>
+                 <height>25</height>
+                </size>
                </property>
                <property name="font">
                 <font>
                  <pointsize>10</pointsize>
                 </font>
                </property>
-               <property name="text">
-                <string>Л-П</string>
-               </property>
-               <attribute name="buttonGroup">
-                <string notr="true">buttonGroup_direction</string>
-               </attribute>
-              </widget>
-             </item>
-             <item>
-              <widget class="QRadioButton" name="radioButton_direction_pl">
-               <property name="font">
-                <font>
-                 <pointsize>10</pointsize>
-                </font>
-               </property>
-               <property name="font">
-                <font>
-                 <pointsize>10</pointsize>
-                </font>
-               </property>
-               <property name="text">
-                <string>П-Л</string>
-               </property>
-               <attribute name="buttonGroup">
-                <string notr="true">buttonGroup_direction</string>
-               </attribute>
-              </widget>
-             </item>
-             <item>
-              <widget class="QRadioButton" name="radioButton_direction_ll">
-               <property name="font">
-                <font>
-                 <pointsize>10</pointsize>
-                </font>
-               </property>
-               <property name="font">
-                <font>
-                 <pointsize>10</pointsize>
-                </font>
-               </property>
-               <property name="text">
-                <string>Л-Л</string>
-               </property>
-               <attribute name="buttonGroup">
-                <string notr="true">buttonGroup_direction</string>
-               </attribute>
-              </widget>
-             </item>
-             <item>
-              <widget class="QRadioButton" name="radioButton_direction_pp">
-               <property name="font">
-                <font>
-                 <pointsize>10</pointsize>
-                </font>
-               </property>
-               <property name="font">
-                <font>
-                 <pointsize>10</pointsize>
-                </font>
-               </property>
-               <property name="text">
-                <string>П-П</string>
-               </property>
-               <attribute name="buttonGroup">
-                <string notr="true">buttonGroup_direction</string>
-               </attribute>
+               <item>
+                <property name="text">
+                 <string>Л-П</string>
+                </property>
+               </item>
+               <item>
+                <property name="text">
+                 <string>П-Л</string>
+                </property>
+               </item>
+               <item>
+                <property name="text">
+                 <string>Л-Л</string>
+                </property>
+               </item>
+               <item>
+                <property name="text">
+                 <string>П-П</string>
+                </property>
+               </item>
               </widget>
              </item>
             </layout>

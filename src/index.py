@@ -1,6 +1,7 @@
-from typing import Callable, Union
-import utils.MathMethod as MathMethod
+from typing import Callable, Union, Dict, Any
+import src.utils.MathMethod as MathMethod
 from imports import *
+from pathlib import Path
 
 class SelRegulator:
     def __init__(self):
@@ -131,7 +132,7 @@ class SelRegulator:
             Получить количество рабочих линий
         """
         try:
-            return int(self.ui.input_count_work_line.text())
+            return int(self.ui.spinBox_working_lines.value())
         except Exception as e:
             self.ui.statusbar.showMessage(f"Ошибка: {str(e)}")
 
@@ -140,7 +141,7 @@ class SelRegulator:
             Получить количество резервных линий
         """
         try:
-            return int(self.ui.input_backup_lines.text())
+            return int(self.ui.spinBox_reserve_lines.value())
         except Exception as e:
             self.ui.statusbar.showMessage(f"Ошибка: {str(e)}")
 
@@ -148,110 +149,122 @@ class SelRegulator:
         """
             Получить наличие съемной резервной линии
         """
-        return self.ui.checkbox_removable_backup_line.isChecked()
+        return self.ui.spinBox_removable_reserve.value()
 
     def get_sto_gprg_execution(self):
         """
             Получить исполнение по СТО ГПРГ
         """
-        return self.ui.checkbox_sto_gprg_execution.isChecked()
+        return self.ui.comboBox_sto_gprg.currentText()
 
-    def get_heating(self):
+    def get_heating_type(self) -> str:
         """
-            Получить обогрев
+            Получить тип обогрева
         """
-        return self.ui.checkbox_heating.isChecked()
+        try:
+            if self.ui.radioButton_heating_og.isChecked():
+                return "ОГ"
+            elif self.ui.radioButton_heating_oe.isChecked():
+                return "ОЭ"
+            else:
+                return "0"
 
-    def get_telemetry(self):
+        except Exception as e:
+            self.ui.statusbar.showMessage(f"Ошибка: {str(e)}")
+
+    def get_telemetry_type(self) -> str:
         """
-            Получить телеметрию
+            Получить тип телеметрии
         """
-        return self.ui.checkbox_telemetry.isChecked()
+        try:
+            if self.ui.radioButton_telemetry_t.isChecked():
+                return "Т"
+            elif self.ui.radioButton_telemetry_tm.isChecked():
+                return "ТМ"
+            else:
+                return "0"
+
+        except Exception as e:
+            self.ui.statusbar.showMessage(f"Ошибка: {str(e)}")
 
     def get_climate_execution(self):
         """
             Получить климатическое исполнение
         """
-        return self.ui.combo_climate_execution.currentText()
+        return self.ui.comboBox_climate.currentText()
 
-    def get_uirg_equipment(self):
+    def get_uirg_equipment_type(self) -> str:
         """
-            Получить оснащение УИРГ
+            Получить тип оснащения УИРГ
         """
-        return self.ui.checkbox_uirg_equipment.isChecked()
+        try:
+            if self.ui.radioButton_uirg_sg.isChecked():
+                return "СГ"
+            else:
+                return "0"
+
+        except Exception as e:
+            self.ui.statusbar.showMessage(f"Ошибка: {str(e)}")
 
     def get_number_of_gas_pipeline_outlets(self):
         """
             Получить количество выходов газопроводов
         """
         try:
-            return int(self.ui.input_number_of_gas_pipeline_outlets.text())
+            return int(self.ui.spinBox_gas_outputs.value())
         except Exception as e:
             self.ui.statusbar.showMessage(f"Ошибка: {str(e)}")
 
-    def get_inlet_valve_diameter(self):
+    def get_inlet_valve_diameter(self) -> float:
         """
             Получить диаметр запорной арматуры на входе
         """
         try:
-            return float(self.ui.input_inlet_valve_diameter.text().replace(",", '.'))
+            return int(self.ui.lineEdit_valve_diameter_in.text().replace(",", '.'))
         except Exception as e:
             self.ui.statusbar.showMessage(f"Ошибка: {str(e)}")
 
-    def get_outlet_valve_diameter(self):
+    def get_outlet_valve_diameter(self) -> float:
         """
             Получить диаметр запорной арматуры на выходе
         """
         try:
-            return float(self.ui.input_outlet_valve_diameter.text().replace(",", '.'))
+            return int(self.ui.lineEdit_valve_diameter_out.text().replace(",", '.'))
         except Exception as e:
             self.ui.statusbar.showMessage(f"Ошибка: {str(e)}")
 
-    def get_direction(self):
-        """
-            Получить направление
-        """
-        return self.ui.combo_direction.currentText()
-
-    def get_direction_type(self):
+    def get_direction_type(self) -> str:
         """
             Получить тип направления
         """
-        return self.ui.radioButton_direction_lp.isChecked()
+        try:
+            return self.ui.comboBox_direction.currentText()
+        except Exception as e:
+            self.ui.statusbar.showMessage(f"Ошибка: {str(e)}")
 
-
-    def get_uirg_equipment_type(self):
-        """
-            Получить тип оснащения УИРГ
-        """
-        return self.ui.radioButton_uirg_sg.isChecked()
-
-    def get_telemetry_type(self):
-        """
-            Получить тип телеметрии
-        """
-        return self.ui.radioButton_telemetry_t.isChecked()
-
-
-    def get_heating_type(self):
-        """
-            Получить тип обогрева
-        """
-        return self.ui.radioButton_heating_og.isChecked()
 
     def get_bandwidth(self) -> float:
+        """
+            Получить пропускную способность
+        """
         try:
             return float(self.ui.input_bandwidth.text().replace(",", '.'.replace(" ", '')))
         except Exception as e:
             self.ui.statusbar.showMessage(f"Ошибка: {str(e)}")
 
     def get_PIn(self) -> float:
+        """
+            Получить входное давление
+        """
         try:
             return float(self.ui.input_PIn.text().replace(",", '.'.replace(" ", '')))
         except Exception as e:
             self.ui.statusbar.showMessage(f"Ошибка: {str(e)}")
 
     def get_POut(self) -> float:
+        """
+            Получить выходное давление
+        """
         try:
             return float(self.ui.input_POt.text().replace(",", '.'.replace(" ", '')))
         except Exception as e:
@@ -476,7 +489,7 @@ class SelRegulator:
            
     
     def __add_load_save_path(self):
-        #Добавляем полученные пути в лайбел для путей если они доступны
+        #Добавляем полученные пути в лайibel для путей если они доступны
         for file in self.file_path_list:
             if os.path.exists(file):
                 self.lb.insert(tk.END, file) 
@@ -720,41 +733,153 @@ class SelRegulator:
         Метод для обработки выбора типа изделия (ГРПБ, ГРПШ, ГРУ).
         Собирает данные о выбранном типе изделия и сохраняет их.
         """
-        # Получаем выбранный тип изделия из комбо-бокса
+        print(1)
+        # # Получаем выбранный тип изделия из комбо-бокса
         selected_product = self.ui.comboBox_product_type.currentText()
-        
-        # Сохраняем информацию о выбранном типе изделия
+        # #
+        # # # Сохраняем информацию о выбранном типе изделия
         self.selected_product_type = selected_product
-        
-        # Собираем дополнительную информацию о конфигурации газового оборудования
+        #
+        # # Собираем дополнительную информацию о конфигурации газового оборудования
         gas_equipment_config = {
             "Тип изделия": selected_product,
-            "Количество рабочих линий": self.ui.spinBox_working_lines.value(),
-            "Количество резервных линий": self.ui.spinBox_reserve_lines.value(),
-            "Наличие съемной резервной линии": self.ui.spinBox_removable_reserve.value(),
-            "Исполнение по СТО ГПРГ": self.ui.comboBox_sto_gprg.currentText(),
+            "Количество рабочих линий": self.get_count_work_line(),
+            "Количество резервных линий": self.get_backup_lines(),
+            "Наличие съемной резервной линии": self.get_removable_backup_line(),
+            "Исполнение по СТО ГПРГ": self.get_sto_gprg_execution(),
             "Обогрев": self.get_heating_type(),
             "Телеметрия": self.get_telemetry_type(),
-            "Климатическое исполнение": self.ui.comboBox_climate.currentText(),
+            "Климатическое исполнение": self.get_climate_execution(),
             "Оснащение УИРГ": self.get_uirg_equipment_type(),
-            "Количество выходов газопроводов": self.ui.spinBox_gas_outputs.value(),
-            "Диаметр запорной арматуры на входе": self.ui.lineEdit_valve_diameter_in.text(),
-            "Диаметр запорной арматуры на выходе": self.ui.lineEdit_valve_diameter_out.text(),
+            "Количество выходов газопроводов": self.get_number_of_gas_pipeline_outlets(),
+            "Диаметр запорной арматуры на входе": self.get_inlet_valve_diameter(),
+            "Диаметр запорной арматуры на выходе": self.get_outlet_valve_diameter(),
             "Направление": self.get_direction_type()
         }
-        
-        # Сохраняем всю конфигурацию
+
+        # # Сохраняем всю конфигурацию
         self.gas_equipment_config = gas_equipment_config
-        
-        # Выводим сообщение в строке состояния
+        #
+        # # Выводим сообщение в строке состояния
         # self.ui.statusbar.showMessage(f"Выбран тип изделия: {selected_product}", 3000)
 
         print(f"{gas_equipment_config=}")
+        self.search_file_name()
 
         
         # Здесь можно добавить дополнительную логику обработки выбранного типа изделия
         # Например, изменение интерфейса в зависимости от выбранного типа
-        
+
+    def search_file_name(self):
+        """
+            Формирует номенклатурную строку изделия (например, ГРПШ_РДНК-50-400(1000)_1-1_0_4_0_0_У1_0_1_50-50_Л-П)
+            на основе словаря self.gas_equipment_config.
+            """
+
+        # ПРОВЕРКА: Проверка наличия и заполненности словаря
+        if not hasattr(self, 'gas_equipment_config') or not self.gas_equipment_config:
+            # В случае ошибки возвращаем пустую строку
+            return ""
+
+        # Получаем конфигурацию
+        config: Dict[str, Any] = self.gas_equipment_config
+
+        # -----------------------------------------------------------
+        # 2.1. Расчетные и фиксированные части
+        # -----------------------------------------------------------
+
+        # ВАЖНО: Модель регулятора (например, РДНК-50-400(1000)) должна быть определена
+        # в другом месте (после подбора) и сохранена, например, в self.regulator_model_name.
+        regulator_part = "РДНК-50-400(1000)"
+
+        # -----------------------------------------------------------
+        # 2.2. Преобразование значений из словаря в кодовые части
+        # -----------------------------------------------------------
+
+        # 1. Тип изделия: ГРПШ
+        product_type = str(config.get("Тип изделия", ""))
+
+        # 2. Блок линий: 1-1_0 (рабочие-резервные_съемная)
+        working_lines = str(config.get("Количество рабочих линий", 0))
+        reserve_lines = str(config.get("Количество резервных линий", 0))
+        removable_reserve = str(config.get("Наличие съемной резервной линии", 0))
+        lines_block = f"{working_lines}-{reserve_lines}_{removable_reserve}"
+
+        # 3. Исполнение по СТО: 4
+        sto_gprg_full = str(config.get("Исполнение по СТО ГПРГ", "0"))
+
+
+        # 4. Обогрев: 0
+        heating_value = str(config.get("Обогрев", "0"))
+
+        # 5. Телеметрия: 0
+        telemetry_value = str(config.get("Телеметрия", "0"))
+
+        # 6. Климатическое исполнение: У1
+        climate_code = str(config.get("Климатическое исполнение", "У1"))
+
+        # 7. Оснащение УИРГ: 0
+        uirg_equipment_full = str(config.get("Оснащение УИРГ", "0"))
+
+        # 8. Количество выходов: 1
+        gas_outputs = str(config.get("Количество выходов газопроводов", 1))
+
+        # 9. Диаметры: 50-50
+        valve_diameter_in = str(config.get("Диаметр запорной арматуры на входе", "НД"))
+        valve_diameter_out = str(config.get("Диаметр запорной арматуры на выходе", "НД"))
+        diameters_block = f"{valve_diameter_in}-{valve_diameter_out}"
+
+        # 10. Направление: Л-П
+        direction_value = str(config.get("Направление", "Л-П"))
+
+        # -----------------------------------------------------------
+        # 3. Сборка финальной строки в нужной последовательности
+        # -----------------------------------------------------------
+
+        parts = [
+            product_type,
+            regulator_part,
+            lines_block,
+            sto_gprg_full,
+            heating_value,
+            telemetry_value,
+            climate_code,
+            uirg_equipment_full,
+            gas_outputs,
+            diameters_block,
+            direction_value
+        ]
+
+        # Объединяем все части через разделитель "_"
+        print("_".join(map(str, parts)))
+        stri = "_".join(map(str, parts))
+
+        selected_product = stri.split("_")[0]
+        regulator = (stri.split("_")[1]).split("-")[0]
+        print(selected_product, regulator)
+
+
+
+        # 1. Объединение частей пути с помощью оператора /
+        # Python сам поставит нужный разделитель: '\' для Windows или '/' для Linux/Mac.
+        folder = "Каталог"
+        sub_folder = selected_product
+        sub_sub_folder = regulator
+        file_name = stri + ".cdw"
+
+        file_path = Path(folder) / sub_folder /sub_sub_folder/ file_name
+
+        print(f"Путь: {file_path}")
+
+        # 2. Объединение с текущим рабочим каталогом
+        full_path = Path.cwd() / file_path
+        print(f"Полный путь: {full_path}")
+
+        if full_path.exists():
+            print(f"Путь существует: {full_path}")
+        else:
+            print(f"Путь не существует: {full_path}")
+
     def start_initial_log(self) -> None:
         """start_initial_log добавляет стартовые данные о сканировании в логи"""
         self.__write_log_wrapper("======================")
@@ -878,7 +1003,7 @@ class SelRegulator:
                         
                     elif mb_diap_Paut[0] != "None":
                         if float(output_pressure) == float(mb_diap_Paut[0]):
-                            name_devace = sheet[get_excel_column(i_cell+1)+"1"].value
+                            name_devace = sheet[get_excel_column(i_cell+1)+"1"].valu
                             row_scr_i=0
                             for row_scr in sheet.iter_rows(values_only=True):
                                 if row_scr_i > 2:
