@@ -875,8 +875,13 @@ class SelRegulator:
         full_path = Path.cwd() / file_path
         print(f"Полный путь: {full_path}")
 
+        current_text = self.ui.plainTextEdit_2.toPlainText()
+        new_text = current_text + "\n" + self.__split_and_insert_newline(str(full_path))
+        self.ui.plainTextEdit_2.setPlainText(new_text)
         if full_path.exists():
+
             print(f"Путь существует: {full_path}")
+
         else:
             print(f"Путь не существует: {full_path}")
 
