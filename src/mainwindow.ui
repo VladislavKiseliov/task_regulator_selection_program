@@ -6,14 +6,14 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>1000</width>
-    <height>825</height>
+    <width>1200</width>
+    <height>900</height>
    </rect>
   </property>
   <property name="minimumSize">
    <size>
-    <width>800</width>
-    <height>0</height>
+    <width>1000</width>
+    <height>700</height>
    </size>
   </property>
   <property name="windowTitle">
@@ -21,38 +21,31 @@
   </property>
   <property name="windowIcon">
    <iconset>
-    <normaloff>:/icon/iconw.ico</normaloff>
-   </iconset>
+    <normaloff>:/icon/iconw.ico</normaloff>:/icon/iconw.ico</iconset>
   </property>
   <widget class="QWidget" name="centralwidget">
-   <layout class="QHBoxLayout" name="horizontalLayout">
+   <layout class="QHBoxLayout" name="horizontalLayout" stretch="2,3">
     <property name="spacing">
-     <number>10</number>
+     <number>15</number>
     </property>
     <property name="leftMargin">
-     <number>10</number>
+     <number>15</number>
     </property>
     <property name="topMargin">
-     <number>10</number>
+     <number>15</number>
     </property>
     <property name="rightMargin">
-     <number>10</number>
+     <number>15</number>
     </property>
     <property name="bottomMargin">
-     <number>10</number>
+     <number>15</number>
     </property>
     <item>
      <widget class="QTabWidget" name="tabWidget">
       <property name="minimumSize">
        <size>
-        <width>450</width>
-        <height>0</height>
-       </size>
-      </property>
-      <property name="maximumSize">
-       <size>
         <width>500</width>
-        <height>16777215</height>
+        <height>0</height>
        </size>
       </property>
       <property name="font">
@@ -480,14 +473,14 @@
                <item>
                 <layout class="QHBoxLayout" name="horizontalLayout_4">
                  <property name="spacing">
-                  <number>0</number>
+                  <number>10</number>
                  </property>
                  <item>
                   <widget class="QPushButton" name="pushButton_flag_diametr">
                    <property name="minimumSize">
                     <size>
                      <width>0</width>
-                     <height>30</height>
+                     <height>35</height>
                     </size>
                    </property>
                    <property name="font">
@@ -496,7 +489,7 @@
                     </font>
                    </property>
                    <property name="text">
-                    <string>Диаметр</string>
+                    <string>Рассчитать диаметр</string>
                    </property>
                   </widget>
                  </item>
@@ -505,7 +498,7 @@
                    <property name="minimumSize">
                     <size>
                      <width>0</width>
-                     <height>30</height>
+                     <height>35</height>
                     </size>
                    </property>
                    <property name="font">
@@ -514,7 +507,7 @@
                     </font>
                    </property>
                    <property name="text">
-                    <string>Скорость</string>
+                    <string>Рассчитать скорость</string>
                    </property>
                   </widget>
                  </item>
@@ -524,8 +517,8 @@
                 <widget class="QPushButton" name="pushButton_make_calculation">
                  <property name="minimumSize">
                   <size>
-                   <width>210</width>
-                   <height>35</height>
+                   <width>0</width>
+                   <height>40</height>
                   </size>
                  </property>
                  <property name="font">
@@ -633,1129 +626,878 @@
               </layout>
              </widget>
             </item>
-           </layout>
-          </widget>
-         </widget>
-        </item>
-       </layout>
-      </widget>
-      <widget class="QWidget" name="gas_equipment_tab">
-       <attribute name="title">
-        <string>Газовое оборудование</string>
-       </attribute>
-       <layout class="QGridLayout" name="gridLayout_gas_equipment">
-        <property name="leftMargin">
-         <number>10</number>
-        </property>
-        <property name="topMargin">
-         <number>10</number>
-        </property>
-        <property name="rightMargin">
-         <number>10</number>
-        </property>
-        <property name="bottomMargin">
-         <number>10</number>
-        </property>
-        <property name="horizontalSpacing">
-         <number>10</number>
-        </property>
-        <property name="verticalSpacing">
-         <number>15</number>
-        </property>
-        <item row="0" column="0">
-         <widget class="QGroupBox" name="groupBox_gas_equipment">
-          <property name="font">
-           <font>
-            <pointsize>11</pointsize>
-            <weight>75</weight>
-            <bold>true</bold>
-           </font>
-          </property>
-          <property name="title">
-           <string>Конфигурация газораспределительного оборудования</string>
-          </property>
-          <layout class="QVBoxLayout" name="verticalLayout_gas_equipment">
-           <item>
-            <layout class="QHBoxLayout" name="horizontalLayout_product_type">
-             <item>
-              <widget class="QLabel" name="label_product_type">
-               <property name="font">
-                <font>
-                 <pointsize>10</pointsize>
-                 <weight>50</weight>
-                 <bold>false</bold>
-                </font>
-               </property>
-               <property name="text">
-                <string>Изделие:</string>
-               </property>
-              </widget>
-             </item>
-             <item>
-              <widget class="QComboBox" name="comboBox_product_type">
-               <property name="minimumSize">
-                <size>
-                 <width>0</width>
-                 <height>25</height>
-                </size>
-               </property>
-               <property name="font">
-                <font>
-                 <pointsize>10</pointsize>
-                </font>
-               </property>
-               <item>
-                <property name="text">
-                 <string>ГРПБ</string>
-                </property>
-               </item>
-               <item>
-                <property name="text">
-                 <string>ГРПШ</string>
-                </property>
-               </item>
-               <item>
-                <property name="text">
-                 <string>ГРУ</string>
-                </property>
-               </item>
-              </widget>
-             </item>
-            </layout>
-           </item>
-           <item>
-            <layout class="QHBoxLayout" name="horizontalLayout_working_lines">
-             <item>
-              <widget class="QLabel" name="label_working_lines">
-               <property name="font">
-                <font>
-                 <pointsize>10</pointsize>
-                 <weight>50</weight>
-                 <bold>false</bold>
-                </font>
-               </property>
-               <property name="text">
-                <string>Количество рабочих линий:</string>
-               </property>
-              </widget>
-             </item>
-             <item>
-              <widget class="QSpinBox" name="spinBox_working_lines">
-               <property name="minimumSize">
-                <size>
-                 <width>0</width>
-                 <height>25</height>
-                </size>
-               </property>
-               <property name="font">
-                <font>
-                 <pointsize>10</pointsize>
-                </font>
-               </property>
-               <property name="minimum">
-                <number>1</number>
-               </property>
-               <property name="maximum">
-                <number>10</number>
-               </property>
-              </widget>
-             </item>
-            </layout>
-           </item>
-           <item>
-            <layout class="QHBoxLayout" name="horizontalLayout_reserve_lines">
-             <item>
-              <widget class="QLabel" name="label_reserve_lines">
-               <property name="font">
-                <font>
-                 <pointsize>10</pointsize>
-                 <weight>50</weight>
-                 <bold>false</bold>
-                </font>
-               </property>
-               <property name="text">
-                <string>Количество резервных линий:</string>
-               </property>
-              </widget>
-             </item>
-             <item>
-              <widget class="QSpinBox" name="spinBox_reserve_lines">
-               <property name="minimumSize">
-                <size>
-                 <width>0</width>
-                 <height>25</height>
-                </size>
-               </property>
-               <property name="font">
-                <font>
-                 <pointsize>10</pointsize>
-                </font>
-               </property>
-               <property name="minimum">
-                <number>0</number>
-               </property>
-               <property name="maximum">
-                <number>10</number>
-               </property>
-              </widget>
-             </item>
-            </layout>
-           </item>
-           <item>
-            <layout class="QHBoxLayout" name="horizontalLayout_removable_reserve">
-             <item>
-              <widget class="QLabel" name="label_removable_reserve">
-               <property name="font">
-                <font>
-                 <pointsize>10</pointsize>
-                 <weight>50</weight>
-                 <bold>false</bold>
-                </font>
-               </property>
-               <property name="text">
-                <string>Наличие съемной резервной линии:</string>
-               </property>
-              </widget>
-             </item>
-             <item>
-              <widget class="QSpinBox" name="spinBox_removable_reserve">
-               <property name="minimumSize">
-                <size>
-                 <width>0</width>
-                 <height>25</height>
-                </size>
-               </property>
-               <property name="font">
-                <font>
-                 <pointsize>10</pointsize>
-                </font>
-               </property>
-               <property name="minimum">
-                <number>0</number>
-               </property>
-               <property name="maximum">
-                <number>10</number>
-               </property>
-              </widget>
-             </item>
-            </layout>
-           </item>
-           <item>
-            <layout class="QHBoxLayout" name="horizontalLayout_sto_gprg">
-             <item>
-              <widget class="QLabel" name="label_sto_gprg">
-               <property name="font">
-                <font>
-                 <pointsize>10</pointsize>
-                 <weight>50</weight>
-                 <bold>false</bold>
-                </font>
-               </property>
-               <property name="text">
-                <string>Исполнение по СТО ГПРГ:</string>
-               </property>
-              </widget>
-             </item>
-             <item>
-              <widget class="QComboBox" name="comboBox_sto_gprg">
-               <property name="minimumSize">
-                <size>
-                 <width>0</width>
-                 <height>25</height>
-                </size>
-               </property>
-               <property name="font">
-                <font>
-                 <pointsize>10</pointsize>
-                </font>
-               </property>
-               <item>
-                <property name="text">
-                 <string>1</string>
-                </property>
-               </item>
-               <item>
-                <property name="text">
-                 <string>2</string>
-                </property>
-               </item>
-               <item>
-                <property name="text">
-                 <string>3</string>
-                </property>
-               </item>
-               <item>
-                <property name="text">
-                 <string>4</string>
-                </property>
-               </item>
-               <item>
-                <property name="text">
-                 <string>5</string>
-                </property>
-               </item>
-              </widget>
-             </item>
-            </layout>
-           </item>
-           <item>
-            <widget class="QLabel" name="label_heating">
-             <property name="font">
-              <font>
-               <pointsize>10</pointsize>
-               <weight>50</weight>
-               <bold>false</bold>
-              </font>
-             </property>
-             <property name="text">
-              <string>Обогрев:</string>
-             </property>
-            </widget>
-           </item>
-           <item>
-            <layout class="QHBoxLayout" name="horizontalLayout_heating">
-             <item>
-              <widget class="QRadioButton" name="radioButton_heating_og">
-               <property name="font">
-                <font>
-                 <pointsize>10</pointsize>
-                </font>
-               </property>
-               <property name="text">
-                <string>ОГ</string>
-               </property>
-               <attribute name="buttonGroup">
-                <string notr="true">buttonGroup_heating</string>
-               </attribute>
-              </widget>
-             </item>
-             <item>
-              <widget class="QRadioButton" name="radioButton_heating_oe">
-               <property name="font">
-                <font>
-                 <pointsize>10</pointsize>
-                </font>
-               </property>
-               <property name="text">
-                <string>ОЭ</string>
-               </property>
-               <attribute name="buttonGroup">
-                <string notr="true">buttonGroup_heating</string>
-               </attribute>
-              </widget>
-             </item>
-             <item>
-              <widget class="QRadioButton" name="radioButton_heating_0">
-               <property name="font">
-                <font>
-                 <pointsize>10</pointsize>
-                </font>
-               </property>
-               <property name="text">
-                <string>0</string>
-               </property>
-               <property name="checked">
-                <bool>true</bool>
-               </property>
-               <attribute name="buttonGroup">
-                <string notr="true">buttonGroup_heating</string>
-               </attribute>
-              </widget>
-             </item>
-            </layout>
-           </item>
-           <item>
-            <widget class="QLabel" name="label_telemetry">
-             <property name="font">
-              <font>
-               <pointsize>10</pointsize>
-               <weight>50</weight>
-               <bold>false</bold>
-              </font>
-             </property>
-             <property name="text">
-              <string>Телеметрия:</string>
-             </property>
-            </widget>
-           </item>
-           <item>
-            <layout class="QHBoxLayout" name="horizontalLayout_telemetry">
-             <item>
-              <widget class="QRadioButton" name="radioButton_telemetry_t">
-               <property name="font">
-                <font>
-                 <pointsize>10</pointsize>
-                </font>
-               </property>
-               <property name="text">
-                <string>Т</string>
-               </property>
-               <attribute name="buttonGroup">
-                <string notr="true">buttonGroup_telemetry</string>
-               </attribute>
-              </widget>
-             </item>
-             <item>
-              <widget class="QRadioButton" name="radioButton_telemetry_tm">
-               <property name="font">
-                <font>
-                 <pointsize>10</pointsize>
-                </font>
-               </property>
-               <property name="text">
-                <string>ТМ</string>
-               </property>
-               <attribute name="buttonGroup">
-                <string notr="true">buttonGroup_telemetry</string>
-               </attribute>
-              </widget>
-             </item>
-             <item>
-              <widget class="QRadioButton" name="radioButton_telemetry_0">
-               <property name="font">
-                <font>
-                 <pointsize>10</pointsize>
-                </font>
-               </property>
-               <property name="text">
-                <string>0</string>
-               </property>
-               <property name="checked">
-                <bool>true</bool>
-               </property>
-               <attribute name="buttonGroup">
-                <string notr="true">buttonGroup_telemetry</string>
-               </attribute>
-              </widget>
-             </item>
-            </layout>
-           </item>
-           <item>
-            <layout class="QHBoxLayout" name="horizontalLayout_climate">
-             <item>
-              <widget class="QLabel" name="label_climate">
-               <property name="font">
-                <font>
-                 <pointsize>10</pointsize>
-                 <weight>50</weight>
-                 <bold>false</bold>
-                </font>
-               </property>
-               <property name="text">
-                <string>Климатическое исполнение:</string>
-               </property>
-              </widget>
-             </item>
-             <item>
-              <widget class="QComboBox" name="comboBox_climate">
-               <property name="minimumSize">
-                <size>
-                 <width>0</width>
-                 <height>25</height>
-                </size>
-               </property>
-               <property name="font">
-                <font>
-                 <pointsize>10</pointsize>
-                </font>
-               </property>
-               <item>
-                <property name="text">
-                 <string>У1</string>
-                </property>
-               </item>
-               <item>
-                <property name="text">
-                 <string>УХЛ1</string>
-                </property>
-               </item>
-               <item>
-                <property name="text">
-                 <string>УХЛ4</string>
-                </property>
-               </item>
-              </widget>
-             </item>
-            </layout>
-           </item>
-           <item>
-            <widget class="QLabel" name="label_uirg">
-             <property name="font">
-              <font>
-               <pointsize>10</pointsize>
-               <weight>50</weight>
-               <bold>false</bold>
-              </font>
-             </property>
-             <property name="text">
-              <string>Оснащение УИРГ:</string>
-             </property>
-            </widget>
-           </item>
-           <item>
-            <layout class="QHBoxLayout" name="horizontalLayout_uirg">
-             <item>
-              <widget class="QRadioButton" name="radioButton_uirg_sg">
-               <property name="font">
-                <font>
-                 <pointsize>10</pointsize>
-                </font>
-               </property>
-               <property name="text">
-                <string>СГ</string>
-               </property>
-               <attribute name="buttonGroup">
-                <string notr="true">buttonGroup_uirg</string>
-               </attribute>
-              </widget>
-             </item>
-             <item>
-              <widget class="QRadioButton" name="radioButton_uirg_0">
-               <property name="font">
-                <font>
-                 <pointsize>10</pointsize>
-                </font>
-               </property>
-               <property name="text">
-                <string>0</string>
-               </property>
-               <property name="checked">
-                <bool>true</bool>
-               </property>
-               <attribute name="buttonGroup">
-                <string notr="true">buttonGroup_uirg</string>
-               </attribute>
-              </widget>
-             </item>
-            </layout>
-           </item>
-           <item>
-            <layout class="QHBoxLayout" name="horizontalLayout_gas_outputs">
-             <item>
-              <widget class="QLabel" name="label_gas_outputs">
-               <property name="font">
-                <font>
-                 <pointsize>10</pointsize>
-                 <weight>50</weight>
-                 <bold>false</bold>
-                </font>
-               </property>
-               <property name="text">
-                <string>Количество выходов газопроводов:</string>
-               </property>
-              </widget>
-             </item>
-             <item>
-              <widget class="QSpinBox" name="spinBox_gas_outputs">
-               <property name="minimumSize">
-                <size>
-                 <width>0</width>
-                 <height>25</height>
-                </size>
-               </property>
-               <property name="font">
-                <font>
-                 <pointsize>10</pointsize>
-                </font>
-               </property>
-               <property name="minimum">
-                <number>1</number>
-               </property>
-               <property name="maximum">
-                <number>20</number>
-               </property>
-              </widget>
-             </item>
-            </layout>
-           </item>
-           <item>
-            <layout class="QHBoxLayout" name="horizontalLayout_valve_diameter_in">
-             <item>
-              <widget class="QLabel" name="label_valve_diameter_in">
-               <property name="font">
-                <font>
-                 <pointsize>10</pointsize>
-                 <weight>50</weight>
-                 <bold>false</bold>
-                </font>
-               </property>
-               <property name="text">
-                <string>Диаметр запорной арматуры на входе:</string>
-               </property>
-              </widget>
-             </item>
-             <item>
-              <widget class="QLineEdit" name="lineEdit_valve_diameter_in">
-               <property name="minimumSize">
-                <size>
-                 <width>0</width>
-                 <height>25</height>
-                </size>
-               </property>
-               <property name="font">
-                <font>
-                 <pointsize>10</pointsize>
-                </font>
-               </property>
-               <property name="placeholderText">
-                <string>ДУ</string>
-               </property>
-              </widget>
-             </item>
-            </layout>
-           </item>
-           <item>
-            <layout class="QHBoxLayout" name="horizontalLayout_valve_diameter_out">
-             <item>
-              <widget class="QLabel" name="label_valve_diameter_out">
-               <property name="font">
-                <font>
-                 <pointsize>10</pointsize>
-                 <weight>50</weight>
-                 <bold>false</bold>
-                </font>
-               </property>
-               <property name="text">
-                <string>Диаметр запорной арматуры на выходе:</string>
-               </property>
-              </widget>
-             </item>
-             <item>
-              <widget class="QLineEdit" name="lineEdit_valve_diameter_out">
-               <property name="minimumSize">
-                <size>
-                 <width>0</width>
-                 <height>25</height>
-                </size>
-               </property>
-               <property name="font">
-                <font>
-                 <pointsize>10</pointsize>
-                </font>
-               </property>
-               <property name="placeholderText">
-                <string>ДУ</string>
-               </property>
-              </widget>
-             </item>
-            </layout>
-           </item>
-           <item>
-            <widget class="QLabel" name="label_direction">
-             <property name="font">
-              <font>
-               <pointsize>10</pointsize>
-               <weight>50</weight>
-               <bold>false</bold>
-              </font>
-             </property>
-             <property name="text">
-              <string>Направление:</string>
-             </property>
-            </widget>
-           </item>
-           <item>
-            <layout class="QHBoxLayout" name="horizontalLayout_direction">
-             <item>
-              <widget class="QComboBox" name="comboBox_direction">
-               <property name="minimumSize">
-                <size>
-                 <width>0</width>
-                 <height>25</height>
-                </size>
-               </property>
-               <property name="font">
-                <font>
-                 <pointsize>10</pointsize>
-                </font>
-               </property>
-               <item>
-                <property name="text">
-                 <string>Л-П</string>
-                </property>
-               </item>
-               <item>
-                <property name="text">
-                 <string>П-Л</string>
-                </property>
-               </item>
-               <item>
-                <property name="text">
-                 <string>Л-Л</string>
-                </property>
-               </item>
-               <item>
-                <property name="text">
-                 <string>П-П</string>
-                </property>
-               </item>
-              </widget>
-             </item>
-            </layout>
-           </item>
-          </layout>
-         </widget>
-        </item>
-        <item row="1" column="0">
-         <widget class="QLabel" name="label_4">
-          <property name="maximumSize">
-           <size>
-            <width>16777215</width>
-            <height>30</height>
-           </size>
-          </property>
-          <property name="font">
-           <font>
-            <pointsize>11</pointsize>
-            <weight>75</weight>
-            <bold>true</bold>
-           </font>
-          </property>
-          <property name="text">
-           <string>Диапазон процента загрузки</string>
-          </property>
-          <property name="alignment">
-           <set>Qt::AlignCenter</set>
-          </property>
-         </widget>
-        </item>
-        <item row="2" column="0">
-         <widget class="QWidget" name="widget">
-          <property name="minimumSize">
-           <size>
-            <width>0</width>
-            <height>50</height>
-           </size>
-          </property>
-          <property name="maximumSize">
-           <size>
-            <width>16777215</width>
-            <height>50</height>
-           </size>
-          </property>
-          <layout class="QHBoxLayout" name="horizontalLayout_2">
-           <property name="topMargin">
-            <number>0</number>
-           </property>
-           <property name="bottomMargin">
-            <number>0</number>
-           </property>
-           <item>
-            <widget class="QLabel" name="label_min_percent">
-             <property name="maximumSize">
-              <size>
-               <width>16777215</width>
-               <height>30</height>
-              </size>
-             </property>
-             <property name="font">
-              <font>
-               <pointsize>11</pointsize>
-              </font>
-             </property>
-             <property name="text">
-              <string>Min %:</string>
-             </property>
-            </widget>
-           </item>
-           <item>
-            <widget class="QLineEdit" name="min_loading_range_gas_equipment">
-             <property name="minimumSize">
-              <size>
-               <width>0</width>
-               <height>30</height>
-              </size>
-             </property>
-             <property name="font">
-              <font>
-               <pointsize>11</pointsize>
-              </font>
-             </property>
-             <property name="text">
-              <string>20</string>
-             </property>
-            </widget>
-           </item>
-           <item>
-            <widget class="QLabel" name="label_max_percent">
-             <property name="maximumSize">
-              <size>
-               <width>16777215</width>
-               <height>30</height>
-              </size>
-             </property>
-             <property name="font">
-              <font>
-               <pointsize>11</pointsize>
-              </font>
-             </property>
-             <property name="text">
-              <string>- Max %:</string>
-             </property>
-            </widget>
-           </item>
-           <item>
-            <widget class="QLineEdit" name="max_loading_range_gas_equipment">
-             <property name="minimumSize">
-              <size>
-               <width>0</width>
-               <height>30</height>
-              </size>
-             </property>
-             <property name="font">
-              <font>
-               <pointsize>11</pointsize>
-              </font>
-             </property>
-             <property name="text">
-              <string>100</string>
-             </property>
-            </widget>
-           </item>
-          </layout>
-         </widget>
-        </item>
-        <item row="3" column="0">
-         <widget class="QLabel" name="label_7">
-          <property name="maximumSize">
-           <size>
-            <width>16777215</width>
-            <height>30</height>
-           </size>
-          </property>
-          <property name="font">
-           <font>
-            <pointsize>11</pointsize>
-            <weight>75</weight>
-            <bold>true</bold>
-           </font>
-          </property>
-          <property name="text">
-           <string>Название файла</string>
-          </property>
-          <property name="alignment">
-           <set>Qt::AlignCenter</set>
-          </property>
-         </widget>
-        </item>
-        <item row="4" column="0">
-         <widget class="QCheckBox" name="left_to_right">
-          <property name="font">
-           <font>
-            <pointsize>10</pointsize>
-           </font>
-          </property>
-          <property name="text">
-           <string>Изделия справа налево
-(по умолчанию слева направо)</string>
-          </property>
-         </widget>
-        </item>
-        <item row="5" column="0">
-         <widget class="QCheckBox" name="PZK_position_sensor">
-          <property name="font">
-           <font>
-            <pointsize>10</pointsize>
-           </font>
-          </property>
-          <property name="text">
-           <string>Датчик положения ПЗК</string>
-          </property>
-         </widget>
-        </item>
-        <item row="6" column="0">
-         <widget class="QCheckBox" name="Regulator_for_liquefied_gas">
-          <property name="font">
-           <font>
-            <pointsize>10</pointsize>
-           </font>
-          </property>
-          <property name="text">
-           <string>Регулятор сжиженного газа</string>
-          </property>
-         </widget>
-        </item>
-        <item row="7" column="0">
-         <widget class="Line" name="line_separator">
-          <property name="orientation">
-           <enum>Qt::Horizontal</enum>
-          </property>
-          <property name="lineWidth">
-           <number>2</number>
-          </property>
-          <property name="midLineWidth">
-           <number>1</number>
-          </property>
-         </widget>
-        </item>
-       </layout>
-      </widget>
-     <item>
-      <widget class="QWidget" name="widget_2" native="true">
-       <property name="minimumSize">
-        <size>
-         <width>400</width>
-         <height>0</height>
-        </size>
-       </property>
-       <layout class="QVBoxLayout" name="verticalLayout_2">
-        <property name="spacing">
-         <number>0</number>
-        </property>
-        <property name="leftMargin">
-         <number>0</number>
-        </property>
-        <property name="topMargin">
-         <number>0</number>
-        </property>
-        <property name="rightMargin">
-         <number>0</number>
-        </property>
-        <property name="bottomMargin">
-         <number>0</number>
-        </property>
-        <item>
-         <widget class="QWidget" name="widget_3" native="true">
-          <property name="minimumSize">
-           <size>
-            <width>0</width>
-            <height>200</height>
-           </size>
-          </property>
-          <property name="maximumSize">
-           <size>
-            <width>16777215</width>
-            <height>200</height>
-           </size>
-          </property>
-          <layout class="QVBoxLayout" name="verticalLayout_6">
-           <property name="spacing">
-            <number>0</number>
-           </property>
-           <property name="leftMargin">
-            <number>0</number>
-           </property>
-           <property name="topMargin">
-            <number>0</number>
-           </property>
-           <property name="rightMargin">
-            <number>0</number>
-           </property>
-           <property name="bottomMargin">
-            <number>0</number>
-           </property>
-           <item>
-            <widget class="QScrollArea" name="scrollArea_2">
-             <property name="widgetResizable">
-              <bool>true</bool>
-             </property>
-             <widget class="QWidget" name="scrollAreaWidgetContents_2">
-              <property name="geometry">
-               <rect>
-                <x>0</x>
-                <y>0</y>
-                <width>548</width>
-                <height>198</height>
-               </rect>
+            <!-- Добавляем содержимое второй вкладки -->
+            <item>
+             <widget class="QGroupBox" name="groupBox_gas_equipment">
+              <property name="font">
+               <font>
+                <pointsize>11</pointsize>
+                <weight>75</weight>
+                <bold>true</bold>
+               </font>
               </property>
-              <layout class="QVBoxLayout" name="verticalLayout_5">
-               <item>
-                <widget class="QWidget" name="widget_5" native="true"/>
-               </item>
-              </layout>
-             </widget>
-            </widget>
-           </item>
-          </layout>
-         </widget>
-        </item>
-        <item>
-         <widget class="QWidget" name="widget_4" native="true">
-          <layout class="QVBoxLayout" name="verticalLayout_3">
-           <property name="spacing">
-            <number>0</number>
-           </property>
-           <property name="leftMargin">
-            <number>0</number>
-           </property>
-           <property name="topMargin">
-            <number>0</number>
-           </property>
-           <property name="rightMargin">
-            <number>0</number>
-           </property>
-           <property name="bottomMargin">
-            <number>0</number>
-           </property>
-           <item>
-            <widget class="QScrollArea" name="scrollArea">
-             <property name="widgetResizable">
-              <bool>true</bool>
-             </property>
-             <widget class="QWidget" name="scrollAreaWidgetContents">
-              <property name="geometry">
-               <rect>
-                <x>0</x>
-                <y>0</y>
-                <width>548</width>
-                <height>582</height>
-               </rect>
+              <property name="title">
+               <string>Конфигурация газораспределительного оборудования</string>
               </property>
-              <layout class="QHBoxLayout" name="horizontalLayout_7">
+              <layout class="QVBoxLayout" name="verticalLayout_gas_equipment">
+               <property name="spacing">
+                <number>10</number>
+               </property>
                <item>
-                <layout class="QVBoxLayout" name="verticalLayout_4">
+                <layout class="QHBoxLayout" name="horizontalLayout_product_type">
+                 <property name="spacing">
+                  <number>10</number>
+                 </property>
                  <item>
-                  <widget class="QPlainTextEdit" name="plainTextEdit">
+                  <widget class="QLabel" name="label_product_type">
                    <property name="font">
                     <font>
-                     <pointsize>11</pointsize>
+                     <pointsize>10</pointsize>
+                     <weight>50</weight>
+                     <bold>false</bold>
                     </font>
                    </property>
-                   <property name="readOnly">
-                    <bool>true</bool>
-                   </property>
-                   <property name="overwriteMode">
-                    <bool>false</bool>
+                   <property name="text">
+                    <string>Изделие:</string>
                    </property>
                   </widget>
                  </item>
                  <item>
-                  <widget class="QPushButton" name="select_button_2">
+                  <widget class="QComboBox" name="comboBox_product_type">
                    <property name="minimumSize">
                     <size>
                      <width>0</width>
-                     <height>50</height>
+                     <height>35</height>
                     </size>
                    </property>
                    <property name="font">
                     <font>
-                     <pointsize>12</pointsize>
-                     <weight>75</weight>
-                     <bold>true</bold>
+                     <pointsize>10</pointsize>
+                    </font>
+                   </property>
+                   <item>
+                    <property name="text">
+                     <string>ГРПБ</string>
+                    </property>
+                   </item>
+                   <item>
+                    <property name="text">
+                     <string>ГРПШ</string>
+                    </property>
+                   </item>
+                   <item>
+                    <property name="text">
+                     <string>ГРУ</string>
+                    </property>
+                   </item>
+                  </widget>
+                 </item>
+                </layout>
+               </item>
+               <item>
+                <layout class="QHBoxLayout" name="horizontalLayout_working_lines">
+                 <property name="spacing">
+                  <number>10</number>
+                 </property>
+                 <item>
+                  <widget class="QLabel" name="label_working_lines">
+                   <property name="font">
+                    <font>
+                     <pointsize>10</pointsize>
+                     <weight>50</weight>
+                     <bold>false</bold>
                     </font>
                    </property>
                    <property name="text">
-                    <string>Подобрать схему</string>
+                    <string>Количество рабочих линий:</string>
+                   </property>
+                  </widget>
+                 </item>
+                 <item>
+                  <widget class="QSpinBox" name="spinBox_working_lines">
+                   <property name="minimumSize">
+                    <size>
+                     <width>0</width>
+                     <height>35</height>
+                    </size>
+                   </property>
+                   <property name="font">
+                    <font>
+                     <pointsize>10</pointsize>
+                    </font>
+                   </property>
+                   <property name="minimum">
+                    <number>1</number>
+                   </property>
+                   <property name="maximum">
+                    <number>10</number>
+                   </property>
+                   <property name="value">
+                    <number>1</number>
                    </property>
                   </widget>
                  </item>
                 </layout>
                </item>
                <item>
-                <widget class="QPlainTextEdit" name="plainTextEdit_2">
+                <layout class="QHBoxLayout" name="horizontalLayout_reserve_lines">
+                 <property name="spacing">
+                  <number>10</number>
+                 </property>
+                 <item>
+                  <widget class="QLabel" name="label_reserve_lines">
+                   <property name="font">
+                    <font>
+                     <pointsize>10</pointsize>
+                     <weight>50</weight>
+                     <bold>false</bold>
+                    </font>
+                   </property>
+                   <property name="text">
+                    <string>Количество резервных линий:</string>
+                   </property>
+                  </widget>
+                 </item>
+                 <item>
+                  <widget class="QSpinBox" name="spinBox_reserve_lines">
+                   <property name="minimumSize">
+                    <size>
+                     <width>0</width>
+                     <height>35</height>
+                    </size>
+                   </property>
+                   <property name="font">
+                    <font>
+                     <pointsize>10</pointsize>
+                    </font>
+                   </property>
+                   <property name="minimum">
+                    <number>0</number>
+                   </property>
+                   <property name="maximum">
+                    <number>10</number>
+                   </property>
+                  </widget>
+                 </item>
+                </layout>
+               </item>
+               <item>
+                <layout class="QHBoxLayout" name="horizontalLayout_removable_reserve">
+                 <property name="spacing">
+                  <number>10</number>
+                 </property>
+                 <item>
+                  <widget class="QLabel" name="label_removable_reserve">
+                   <property name="font">
+                    <font>
+                     <pointsize>10</pointsize>
+                     <weight>50</weight>
+                     <bold>false</bold>
+                    </font>
+                   </property>
+                   <property name="text">
+                    <string>Наличие съемной резервной линии:</string>
+                   </property>
+                  </widget>
+                 </item>
+                 <item>
+                  <widget class="QSpinBox" name="spinBox_removable_reserve">
+                   <property name="minimumSize">
+                    <size>
+                     <width>0</width>
+                     <height>35</height>
+                    </size>
+                   </property>
+                   <property name="font">
+                    <font>
+                     <pointsize>10</pointsize>
+                    </font>
+                   </property>
+                   <property name="minimum">
+                    <number>0</number>
+                   </property>
+                   <property name="maximum">
+                    <number>10</number>
+                   </property>
+                  </widget>
+                 </item>
+                </layout>
+               </item>
+               <item>
+                <layout class="QHBoxLayout" name="horizontalLayout_sto_gprg">
+                 <property name="spacing">
+                  <number>10</number>
+                 </property>
+                 <item>
+                  <widget class="QLabel" name="label_sto_gprg">
+                   <property name="font">
+                    <font>
+                     <pointsize>10</pointsize>
+                     <weight>50</weight>
+                     <bold>false</bold>
+                    </font>
+                   </property>
+                   <property name="text">
+                    <string>Исполнение по СТО ГПРГ:</string>
+                   </property>
+                  </widget>
+                 </item>
+                 <item>
+                  <widget class="QComboBox" name="comboBox_sto_gprg">
+                   <property name="minimumSize">
+                    <size>
+                     <width>0</width>
+                     <height>35</height>
+                    </size>
+                   </property>
+                   <property name="font">
+                    <font>
+                     <pointsize>10</pointsize>
+                    </font>
+                   </property>
+                   <item>
+                    <property name="text">
+                     <string>1</string>
+                    </property>
+                   </item>
+                   <item>
+                    <property name="text">
+                     <string>2</string>
+                    </property>
+                   </item>
+                   <item>
+                    <property name="text">
+                     <string>3</string>
+                    </property>
+                   </item>
+                   <item>
+                    <property name="text">
+                     <string>4</string>
+                    </property>
+                   </item>
+                   <item>
+                    <property name="text">
+                     <string>5</string>
+                    </property>
+                   </item>
+                  </widget>
+                 </item>
+                </layout>
+               </item>
+               <item>
+                <widget class="QLabel" name="label_heating">
                  <property name="font">
                   <font>
-                   <pointsize>11</pointsize>
+                   <pointsize>10</pointsize>
+                   <weight>50</weight>
+                   <bold>false</bold>
                   </font>
                  </property>
-                 <property name="readOnly">
-                  <bool>true</bool>
-                 </property>
-                 <property name="overwriteMode">
-                  <bool>false</bool>
+                 <property name="text">
+                  <string>Обогрев:</string>
                  </property>
                 </widget>
                </item>
+               <item>
+                <layout class="QHBoxLayout" name="horizontalLayout_heating">
+                 <property name="spacing">
+                  <number>15</number>
+                 </property>
+                 <item>
+                  <widget class="QRadioButton" name="radioButton_heating_og">
+                   <property name="font">
+                    <font>
+                     <pointsize>10</pointsize>
+                    </font>
+                   </property>
+                   <property name="text">
+                    <string>ОГ</string>
+                   </property>
+                   <attribute name="buttonGroup">
+                    <string notr="true">buttonGroup_heating</string>
+                   </attribute>
+                  </widget>
+                 </item>
+                 <item>
+                  <widget class="QRadioButton" name="radioButton_heating_oe">
+                   <property name="font">
+                    <font>
+                     <pointsize>10</pointsize>
+                    </font>
+                   </property>
+                   <property name="text">
+                    <string>ОЭ</string>
+                   </property>
+                   <attribute name="buttonGroup">
+                    <string notr="true">buttonGroup_heating</string>
+                   </attribute>
+                  </widget>
+                 </item>
+                 <item>
+                  <widget class="QRadioButton" name="radioButton_heating_0">
+                   <property name="font">
+                    <font>
+                     <pointsize>10</pointsize>
+                    </font>
+                   </property>
+                   <property name="text">
+                    <string>0</string>
+                   </property>
+                   <property name="checked">
+                    <bool>true</bool>
+                   </property>
+                   <attribute name="buttonGroup">
+                    <string notr="true">buttonGroup_heating</string>
+                   </attribute>
+                  </widget>
+                 </item>
+                </layout>
+               </item>
+               <item>
+                <widget class="QLabel" name="label_telemetry">
+                 <property name="font">
+                  <font>
+                   <pointsize>10</pointsize>
+                   <weight>50</weight>
+                   <bold>false</bold>
+                  </font>
+                 </property>
+                 <property name="text">
+                  <string>Телеметрия:</string>
+                 </property>
+                </widget>
+               </item>
+               <item>
+                <layout class="QHBoxLayout" name="horizontalLayout_telemetry">
+                 <property name="spacing">
+                  <number>15</number>
+                 </property>
+                 <item>
+                  <widget class="QRadioButton" name="radioButton_telemetry_t">
+                   <property name="font">
+                    <font>
+                     <pointsize>10</pointsize>
+                    </font>
+                   </property>
+                   <property name="text">
+                    <string>Т</string>
+                   </property>
+                   <attribute name="buttonGroup">
+                    <string notr="true">buttonGroup_telemetry</string>
+                   </attribute>
+                  </widget>
+                 </item>
+                 <item>
+                  <widget class="QRadioButton" name="radioButton_telemetry_tm">
+                   <property name="font">
+                    <font>
+                     <pointsize>10</pointsize>
+                    </font>
+                   </property>
+                   <property name="text">
+                    <string>ТМ</string>
+                   </property>
+                   <attribute name="buttonGroup">
+                    <string notr="true">buttonGroup_telemetry</string>
+                   </attribute>
+                  </widget>
+                 </item>
+                 <item>
+                  <widget class="QRadioButton" name="radioButton_telemetry_0">
+                   <property name="font">
+                    <font>
+                     <pointsize>10</pointsize>
+                    </font>
+                   </property>
+                   <property name="text">
+                    <string>0</string>
+                   </property>
+                   <property name="checked">
+                    <bool>true</bool>
+                   </property>
+                   <attribute name="buttonGroup">
+                    <string notr="true">buttonGroup_telemetry</string>
+                   </attribute>
+                  </widget>
+                 </item>
+                </layout>
+               </item>
+               <item>
+                <layout class="QHBoxLayout" name="horizontalLayout_climate">
+                 <property name="spacing">
+                  <number>10</number>
+                 </property>
+                 <item>
+                  <widget class="QLabel" name="label_climate">
+                   <property name="font">
+                    <font>
+                     <pointsize>10</pointsize>
+                     <weight>50</weight>
+                     <bold>false</bold>
+                    </font>
+                   </property>
+                   <property name="text">
+                    <string>Климатическое исполнение:</string>
+                   </property>
+                  </widget>
+                 </item>
+                 <item>
+                  <widget class="QComboBox" name="comboBox_climate">
+                   <property name="minimumSize">
+                    <size>
+                     <width>0</width>
+                     <height>35</height>
+                    </size>
+                   </property>
+                   <property name="font">
+                    <font>
+                     <pointsize>10</pointsize>
+                    </font>
+                   </property>
+                   <item>
+                    <property name="text">
+                     <string>У1</string>
+                    </property>
+                   </item>
+                   <item>
+                    <property name="text">
+                     <string>УХЛ1</string>
+                    </property>
+                   </item>
+                   <item>
+                    <property name="text">
+                     <string>УХЛ4</string>
+                    </property>
+                   </item>
+                  </widget>
+                 </item>
+                </layout>
+               </item>
+               <item>
+                <widget class="QLabel" name="label_uirg">
+                 <property name="font">
+                  <font>
+                   <pointsize>10</pointsize>
+                   <weight>50</weight>
+                   <bold>false</bold>
+                  </font>
+                 </property>
+                 <property name="text">
+                  <string>Оснащение УИРГ:</string>
+                 </property>
+                </widget>
+               </item>
+               <item>
+                <layout class="QHBoxLayout" name="horizontalLayout_uirg">
+                 <property name="spacing">
+                  <number>15</number>
+                 </property>
+                 <item>
+                  <widget class="QRadioButton" name="radioButton_uirg_sg">
+                   <property name="font">
+                    <font>
+                     <pointsize>10</pointsize>
+                    </font>
+                   </property>
+                   <property name="text">
+                    <string>СГ</string>
+                   </property>
+                   <attribute name="buttonGroup">
+                    <string notr="true">buttonGroup_uirg</string>
+                   </attribute>
+                  </widget>
+                 </item>
+                 <item>
+                  <widget class="QRadioButton" name="radioButton_uirg_0">
+                   <property name="font">
+                    <font>
+                     <pointsize>10</pointsize>
+                    </font>
+                   </property>
+                   <property name="text">
+                    <string>0</string>
+                   </property>
+                   <property name="checked">
+                    <bool>true</bool>
+                   </property>
+                   <attribute name="buttonGroup">
+                    <string notr="true">buttonGroup_uirg</string>
+                   </attribute>
+                  </widget>
+                 </item>
+                </layout>
+               </item>
+               <item>
+                <layout class="QHBoxLayout" name="horizontalLayout_gas_outputs">
+                 <property name="spacing">
+                  <number>10</number>
+                 </property>
+                 <item>
+                  <widget class="QLabel" name="label_gas_outputs">
+                   <property name="font">
+                    <font>
+                     <pointsize>10</pointsize>
+                     <weight>50</weight>
+                     <bold>false</bold>
+                    </font>
+                   </property>
+                   <property name="text">
+                    <string>Количество выходов газопроводов:</string>
+                   </property>
+                  </widget>
+                 </item>
+                 <item>
+                  <widget class="QSpinBox" name="spinBox_gas_outputs">
+                   <property name="minimumSize">
+                    <size>
+                     <width>0</width>
+                     <height>35</height>
+                    </size>
+                   </property>
+                   <property name="font">
+                    <font>
+                     <pointsize>10</pointsize>
+                    </font>
+                   </property>
+                   <property name="minimum">
+                    <number>1</number>
+                   </property>
+                   <property name="maximum">
+                    <number>20</number>
+                   </property>
+                  </widget>
+                 </item>
+                </layout>
+               </item>
+               <item>
+                <layout class="QHBoxLayout" name="horizontalLayout_valve_diameter_in">
+                 <property name="spacing">
+                  <number>10</number>
+                 </property>
+                 <item>
+                  <widget class="QLabel" name="label_valve_diameter_in">
+                   <property name="font">
+                    <font>
+                     <pointsize>10</pointsize>
+                     <weight>50</weight>
+                     <bold>false</bold>
+                    </font>
+                   </property>
+                   <property name="text">
+                    <string>Диаметр запорной арматуры на входе:</string>
+                   </property>
+                  </widget>
+                 </item>
+                 <item>
+                  <widget class="QLineEdit" name="lineEdit_valve_diameter_in">
+                   <property name="minimumSize">
+                    <size>
+                     <width>0</width>
+                     <height>35</height>
+                    </size>
+                   </property>
+                   <property name="font">
+                    <font>
+                     <pointsize>10</pointsize>
+                    </font>
+                   </property>
+                   <property name="placeholderText">
+                    <string>ДУ</string>
+                   </property>
+                  </widget>
+                 </item>
+                </layout>
+               </item>
+               <item>
+                <layout class="QHBoxLayout" name="horizontalLayout_valve_diameter_out">
+                 <property name="spacing">
+                  <number>10</number>
+                 </property>
+                 <item>
+                  <widget class="QLabel" name="label_valve_diameter_out">
+                   <property name="font">
+                    <font>
+                     <pointsize>10</pointsize>
+                     <weight>50</weight>
+                     <bold>false</bold>
+                    </font>
+                   </property>
+                   <property name="text">
+                    <string>Диаметр запорной арматуры на выходе:</string>
+                   </property>
+                  </widget>
+                 </item>
+                 <item>
+                  <widget class="QLineEdit" name="lineEdit_valve_diameter_out">
+                   <property name="minimumSize">
+                    <size>
+                     <width>0</width>
+                     <height>35</height>
+                    </size>
+                   </property>
+                   <property name="font">
+                    <font>
+                     <pointsize>10</pointsize>
+                    </font>
+                   </property>
+                   <property name="placeholderText">
+                    <string>ДУ</string>
+                   </property>
+                  </widget>
+                 </item>
+                </layout>
+               </item>
+               <item>
+                <widget class="QLabel" name="label_direction">
+                 <property name="font">
+                  <font>
+                   <pointsize>10</pointsize>
+                   <weight>50</weight>
+                   <bold>false</bold>
+                  </font>
+                 </property>
+                 <property name="text">
+                  <string>Направление:</string>
+                 </property>
+                </widget>
+               </item>
+               <item>
+                <layout class="QHBoxLayout" name="horizontalLayout_direction">
+                 <property name="spacing">
+                  <number>10</number>
+                 </property>
+                 <item>
+                  <widget class="QComboBox" name="comboBox_direction">
+                   <property name="minimumSize">
+                    <size>
+                     <width>0</width>
+                     <height>35</height>
+                    </size>
+                   </property>
+                   <property name="font">
+                    <font>
+                     <pointsize>10</pointsize>
+                    </font>
+                   </property>
+                   <item>
+                    <property name="text">
+                     <string>Л-П</string>
+                    </property>
+                   </item>
+                   <item>
+                    <property name="text">
+                     <string>П-Л</string>
+                    </property>
+                   </item>
+                   <item>
+                    <property name="text">
+                     <string>Л-Л</string>
+                    </property>
+                   </item>
+                   <item>
+                    <property name="text">
+                     <string>П-П</string>
+                    </property>
+                   </item>
+                  </widget>
+                 </item>
+                </layout>
+               </item>
               </layout>
              </widget>
-            </widget>
-           </item>
-           <item>
-            <widget class="QPushButton" name="select_button">
-             <property name="minimumSize">
-              <size>
-               <width>0</width>
-               <height>50</height>
-              </size>
-             </property>
-             <property name="font">
-              <font>
-               <pointsize>12</pointsize>
-               <weight>75</weight>
-               <bold>true</bold>
-              </font>
-             </property>
-             <property name="text">
-              <string>Подобрать регулятор</string>
-             </property>
-            </widget>
-           </item>
-           <item>
-            <widget class="QPushButton" name="open_button">
-             <property name="minimumSize">
-              <size>
-               <width>0</width>
-               <height>50</height>
-              </size>
-             </property>
-             <property name="font">
-              <font>
-               <pointsize>12</pointsize>
-               <weight>75</weight>
-               <bold>true</bold>
-              </font>
-             </property>
-             <property name="text">
-              <string>Загрузить файл</string>
-             </property>
-            </widget>
-           </item>
-           <item>
-            <widget class="QPushButton" name="remove_button">
-             <property name="minimumSize">
-              <size>
-               <width>0</width>
-               <height>50</height>
-              </size>
-             </property>
-             <property name="font">
-              <font>
-               <pointsize>12</pointsize>
-               <weight>75</weight>
-               <bold>true</bold>
-              </font>
-             </property>
-             <property name="text">
-              <string>Удалить</string>
-             </property>
-            </widget>
-           </item>
-           <item>
-            <widget class="QPushButton" name="select_product_button">
-             <property name="minimumSize">
-              <size>
-               <width>0</width>
-               <height>50</height>
-              </size>
-             </property>
-             <property name="font">
-              <font>
-               <pointsize>12</pointsize>
-               <weight>75</weight>
-               <bold>true</bold>
-              </font>
-             </property>
-             <property name="text">
-              <string>Подобрать изделие</string>
-             </property>
-            </widget>
-           </item>
-          </layout>
+            </item>
+           </layout>
+          </widget>
          </widget>
         </item>
        </layout>
       </widget>
-     </item>
-   </widget>
- </widget>
- </widget>
+     </widget>
+    </item>
+    <item>
+     <widget class="QWidget" name="widget_2" native="true">
+      <property name="minimumSize">
+       <size>
+        <width>400</width>
+        <height>0</height>
+       </size>
+      </property>
+      <layout class="QVBoxLayout" name="verticalLayout_2">
+       <property name="spacing">
+        <number>10</number>
+       </property>
+       <property name="leftMargin">
+        <number>0</number>
+       </property>
+       <property name="topMargin">
+        <number>0</number>
+       </property>
+       <property name="rightMargin">
+        <number>0</number>
+       </property>
+       <property name="bottomMargin">
+        <number>0</number>
+       </property>
+       <item>
+        <widget class="QWidget" name="widget_3" native="true">
+         <property name="minimumSize">
+          <size>
+           <width>0</width>
+           <height>200</height>
+          </size>
+         </property>
+         <property name="maximumSize">
+          <size>
+           <width>16777215</width>
+           <height>200</height>
+          </size>
+         </property>
+         <layout class="QVBoxLayout" name="verticalLayout_6">
+          <property name="spacing">
+           <number>0</number>
+          </property>
+          <property name="leftMargin">
+           <number>0</number>
+          </property>
+          <property name="topMargin">
+           <number>0</number>
+          </property>
+          <property name="rightMargin">
+           <number>0</number>
+          </property>
+          <property name="bottomMargin">
+           <number>0</number>
+          </property>
+          <item>
+           <widget class="QScrollArea" name="scrollArea_2">
+            <property name="widgetResizable">
+             <bool>true</bool>
+            </property>
+            <widget class="QWidget" name="scrollAreaWidgetContents_2">
+             <property name="geometry">
+              <rect>
+               <x>0</x>
+               <y>0</y>
+               <width>398</width>
+               <height>198</height>
+              </rect>
+             </property>
+             <layout class="QVBoxLayout" name="verticalLayout_5">
+              <item>
+               <widget class="QWidget" name="widget_5" native="true"/>
+              </item>
+             </layout>
+            </widget>
+           </widget>
+          </item>
+         </layout>
+        </widget>
+       </item>
+       <item>
+        <widget class="QWidget" name="widget_4" native="true">
+         <layout class="QVBoxLayout" name="verticalLayout_3">
+          <property name="spacing">
+           <number>10</number>
+          </property>
+          <property name="leftMargin">
+           <number>0</number>
+          </property>
+          <property name="topMargin">
+           <number>0</number>
+          </property>
+          <property name="rightMargin">
+           <number>0</number>
+          </property>
+          <property name="bottomMargin">
+           <number>0</number>
+          </property>
+          <item>
+           <widget class="QScrollArea" name="scrollArea">
+            <property name="widgetResizable">
+             <bool>true</bool>
+            </property>
+            <widget class="QWidget" name="scrollAreaWidgetContents">
+             <property name="geometry">
+              <rect>
+               <x>0</x>
+               <y>0</y>
+               <width>398</width>
+               <height>500</height>
+              </rect>
+             </property>
+             <layout class="QVBoxLayout" name="verticalLayout_4">
+              <property name="spacing">
+               <number>10</number>
+              </property>
+              <item>
+               <widget class="QPlainTextEdit" name="plainTextEdit">
+                <property name="font">
+                 <font>
+                  <pointsize>10</pointsize>
+                 </font>
+                </property>
+                <property name="readOnly">
+                 <bool>true</bool>
+                </property>
+                <property name="placeholderText">
+                 <string>Результаты расчета будут отображены здесь...</string>
+                </property>
+               </widget>
+              </item>
+              <item>
+               <widget class="QPushButton" name="select_button_2">
+                <property name="minimumSize">
+                 <size>
+                  <width>0</width>
+                  <height>40</height>
+                 </size>
+                </property>
+                <property name="font">
+                 <font>
+                  <pointsize>11</pointsize>
+                  <weight>75</weight>
+                  <bold>true</bold>
+                 </font>
+                </property>
+                <property name="text">
+                 <string>Подобрать схему</string>
+                </property>
+               </widget>
+              </item>
+              <item>
+               <widget class="QPlainTextEdit" name="plainTextEdit_2">
+                <property name="font">
+                 <font>
+                  <pointsize>10</pointsize>
+                 </font>
+                </property>
+                <property name="readOnly">
+                 <bool>true</bool>
+                </property>
+                <property name="placeholderText">
+                 <string>Дополнительная информация...</string>
+                </property>
+               </widget>
+              </item>
+             </layout>
+            </widget>
+           </widget>
+          </item>
+         </layout>
+        </widget>
+       </item>
+      </layout>
+     </widget>
+    </item>
+   </layout>
+  </widget>
   <widget class="QStatusBar" name="statusbar"/>
   <widget class="QMenuBar" name="menubar">
    <property name="geometry">
     <rect>
      <x>0</x>
      <y>0</y>
-     <width>850</width>
+     <width>1200</width>
      <height>30</height>
     </rect>
    </property>
