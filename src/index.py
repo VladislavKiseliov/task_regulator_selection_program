@@ -70,10 +70,10 @@ class SelRegulator:
         и методами класса SelRegulator.
         """
         # Кнопка "Подобрать регулятор" - вызывает метод replacement_button_pressed
-        self.ui.select_button.clicked.connect(self.replacement_button_pressed) #Коннект на нажатие кнопки подбора регулятора
+        self.ui.select_button_2.clicked.connect(self.replacement_button_pressed) #Коннект на нажатие кнопки подбора регулятора
 
         # Кнопка "Открыть файл" - вызывает метод __open_file_dialog
-        self.ui.open_button.clicked.connect(self.__open_file_dialog) #Коннект на нажатие кнопки подбора регулятора
+        self.ui.pushButton_make_calculation.clicked.connect(self.__open_file_dialog) #Коннект на нажатие кнопки подбора регулятора
 
         # Кнопка "Удалить" - вызывает метод remove_selected_file у drop_area
         self.ui.remove_button.clicked.connect(self.drop_area.remove_selected_file) #Коннект на нажатие кнопки подбора регулятора
