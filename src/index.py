@@ -70,13 +70,13 @@ class SelRegulator:
         и методами класса SelRegulator.
         """
         # Кнопка "Подобрать регулятор" - вызывает метод replacement_button_pressed
-        self.ui.select_button_2.clicked.connect(self.replacement_button_pressed)
+        self.ui.pushButton_selected_regulator.clicked.connect(self.replacement_button_pressed)
 
         # Кнопка "Открыть файл" - вызывает метод __open_file_dialog
-        self.ui.pushButton_make_calculation.clicked.connect(self.__open_file_dialog)
+        self.ui.pushButton_load_file.clicked.connect(self.__open_file_dialog)
 
         # Кнопка "Удалить" - вызывает метод remove_selected_file у drop_area
-        self.ui.remove_button.clicked.connect(self.drop_area.remove_selected_file)
+        self.ui.pushButton_delete_file.clicked.connect(self.drop_area.remove_selected_file)
 
         # Кнопка "Открыть папку сохранения логов" - вызывает метод folder_save_open
         # self.ui.open_folder_button.clicked.connect(self.folder_save_open) # Коннект на нажатие кнопки открытия папки сохранения логов
@@ -100,7 +100,7 @@ class SelRegulator:
         self.ui.pushButton_make_calculation.clicked.connect(self.make_calculation)
 
         # Кнопка "Подобрать изделие" - вызывает метод select_product_type
-        self.ui.select_product_button.clicked.connect(self.select_product_type)
+        self.ui.pushButton_selected_scheme.clicked.connect(self.select_product_type)
 
         #Подключение событий изменения текста в полях калькулятора
 
