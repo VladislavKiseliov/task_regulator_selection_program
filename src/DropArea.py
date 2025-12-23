@@ -2,6 +2,9 @@ from imports import *
 
 
 class DropArea(QListWidget):
+    """
+    Класс DropArea отвечает за создание области на веб-странице, куда пользователь может перетаскивать файлы для загрузки
+    """
     def __init__(self, parent=None):
         super().__init__(parent)
         self.setAcceptDrops(True)

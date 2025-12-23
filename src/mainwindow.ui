@@ -110,7 +110,7 @@
                 </widget>
                </item>
                <item>
-                <widget class="QLineEdit" name="input_PIn">
+                <widget class="QLineEdit" name="input_Pressure_Input">
                  <property name="minimumSize">
                   <size>
                    <width>0</width>
@@ -145,7 +145,7 @@
                 </widget>
                </item>
                <item>
-                <widget class="QLineEdit" name="input_POt">
+                <widget class="QLineEdit" name="input_Pressure_Output">
                  <property name="minimumSize">
                   <size>
                    <width>0</width>
@@ -252,7 +252,7 @@
                      </widget>
                     </item>
                     <item>
-                     <widget class="QLineEdit" name="lineEdit_gas_speed">
+                     <widget class="QLineEdit" name="lineEdit_gas_speed_Input">
                       <property name="minimumSize">
                        <size>
                         <width>0</width>
@@ -309,7 +309,7 @@
                      </widget>
                     </item>
                     <item>
-                     <widget class="QLineEdit" name="lineEdit_diametet_of_gas_pipeline">
+                     <widget class="QLineEdit" name="lineEdit_diameter_of_gas_pipeline_Input">
                       <property name="minimumSize">
                        <size>
                         <width>0</width>
@@ -367,7 +367,7 @@
                      </widget>
                     </item>
                     <item>
-                     <widget class="QLineEdit" name="lineEdit_gas_speed_out">
+                     <widget class="QLineEdit" name="lineEdit_gas_speed_Output">
                       <property name="minimumSize">
                        <size>
                         <width>0</width>
@@ -424,7 +424,7 @@
                      </widget>
                     </item>
                     <item>
-                     <widget class="QLineEdit" name="lineEdit_diametet_of_gas_pipeline_out">
+                     <widget class="QLineEdit" name="lineEdit_diametet_of_gas_pipeline_Output">
                       <property name="minimumSize">
                        <size>
                         <width>0</width>
@@ -1185,7 +1185,7 @@
                   </widget>
                  </item>
                  <item>
-                  <widget class="QLineEdit" name="lineEdit_valve_diameter_in">
+                  <widget class="QLineEdit" name="lineEdit_valve_diameter_Input">
                    <property name="minimumSize">
                     <size>
                      <width>0</width>
@@ -1224,7 +1224,7 @@
                   </widget>
                  </item>
                  <item>
-                  <widget class="QLineEdit" name="lineEdit_valve_diameter_out">
+                  <widget class="QLineEdit" name="lineEdit_valve_diameter_Output">
                    <property name="minimumSize">
                     <size>
                      <width>0</width>

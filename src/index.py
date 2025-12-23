@@ -2,6 +2,18 @@ from typing import Callable, Union, Dict, Any
 import src.utils.MathMethod as MathMethod
 from imports import *
 from pathlib import Path
+from contextlib import contextmanager
+
+
+@contextmanager
+def block_signals(widget):
+    widget.blockSignals(True)      # ← 1. Делаем что-то ПЕРЕД
+    try:
+        yield widget               # ← 2. «Пауза» — выполняется тело `with`
+    finally:
+        widget.blockSignals(False) # ← 3. Делаем что-то ПОСЛЕ (даже при ошибке)
+
+
 
 class SelRegulator:
     def __init__(self):
@@ -105,27 +117,27 @@ class SelRegulator:
         #Подключение событий изменения текста в полях калькулятора
 
         # При завершении редактирования поля ввода входного давления вызывается make_calculation
-        self.ui.input_PIn.editingFinished.connect(self.make_calculation)
+        # self.ui.input_Pressure_Input.editingFinished.connect(self.make_calculation)
 
         # При завершении редактирования поля ввода скорости газа вызывается make_calculation
-        self.ui.lineEdit_gas_speed.editingFinished.connect(self.make_calculation)
+        # self.ui.lineEdit_gas_speed.editingFinished.connect(self.make_calculation)
 
         # При завершении редактирования поля ввода диаметра газопровода вызывается make_calculatio
-        self.ui.lineEdit_diametet_of_gas_pipeline.editingFinished.connect(self.make_calculation)
+        # self.ui.lineEdit_diametet_of_gas_pipeline.editingFinished.connect(self.make_calculation)
 
         #Подключение событий изменения текста в полях калькулятора выходного газопровода
 
         # При завершении редактирования поля ввода выходного давления вызывается make_calculation
-        self.ui.input_POt.editingFinished.connect(self.make_calculation)
+        # self.ui.input_Pressure_Output.editingFinished.connect(self.make_calculation)
 
         # При завершении редактирования поля ввода скорости газа на выходе вызывается make_calculation
-        self.ui.lineEdit_gas_speed_out.editingFinished.connect(self.make_calculation)
+        # self.ui.lineEdit_gas_speed_out.editingFinished.connect(self.make_calculation)
 
         # При завершении редактирования поля ввода диаметра газопровода на выходе вызывается make_calculation
-        self.ui.lineEdit_diametet_of_gas_pipeline_out.editingFinished.connect(self.make_calculation)
+        # self.ui.lineEdit_diametet_of_gas_pipeline_out.editingFinished.connect(self.make_calculation)
 
         # При завершении редактирования поля ввода пропускной способности вызывается make_calculation
-        self.ui.input_bandwidth.editingFinished.connect(self.make_calculation)
+        # self.ui.input_bandwidth.editingFinished.connect(self.make_calculation)
 
     def get_count_work_line(self):
         """
@@ -215,23 +227,46 @@ class SelRegulator:
         except Exception as e:
             self.ui.statusbar.showMessage(f"Ошибка: {str(e)}")
 
-    def get_inlet_valve_diameter(self) -> float:
+    def get_valve_diameter(self,ioType:str)->int:
         """
-            Получить диаметр запорной арматуры на входе
-        """
-        try:
-            return int(self.ui.lineEdit_valve_diameter_in.text().replace(",", '.'))
-        except Exception as e:
-            self.ui.statusbar.showMessage(f"Ошибка: {str(e)}")
+                Получить диаметр запорной арматуры  из текстового поля для указанного конца трубопровода.
 
-    def get_outlet_valve_diameter(self) -> float:
-        """
-            Получить диаметр запорной арматуры на выходе
-        """
+                Поддерживаемые имена полей: input_Pressure_In, input_Pressure_Out.
+
+                Параметры:
+                    ioType (str): "Input" — вход, "Output" — выход.
+
+                Возвращает:
+                    float: Значение давления. При ошибке возвращается 0 и отображается сообщение.
+
+                Пример:
+                    pressure_in = self.get_pressure("Input")
+                """
+        if ioType not in ("Input", "Output"):
+            self.ui.statusbar.showMessage("Ошибка: ioType должен быть 'Input' или 'Output'")
+            return 0
+
+        widget_name = f"lineEdit_diameter_of_gas_pipeline_{ioType}"
         try:
-            return int(self.ui.lineEdit_valve_diameter_out.text().replace(",", '.'))
+            widget = getattr(self.ui, widget_name)
+            text = widget.text().replace(",", ".").replace(" ", "")
+            return int(text)
         except Exception as e:
-            self.ui.statusbar.showMessage(f"Ошибка: {str(e)}")
+            self.ui.statusbar.showMessage(f"Ошибка при чтении диаметра ({ioType}): {e}")
+            return 0
+
+    def set_valve_diametr(self,ioType:str,diametr:int)->None:
+        """
+            Устанавливаем значение диаметра в ячейку
+        """
+        widget_name = f"lineEdit_diameter_of_gas_pipeline_{ioType}"
+        try:
+            widget = getattr(self.ui, widget_name)
+            with block_signals(widget):
+                widget.setText(str(diametr))
+
+        except Exception as e:
+            self.ui.statusbar.showMessage(f"Ошибка при вставке диаметра ({ioType}): {e}")
 
     def get_direction_type(self) -> str:
         """
@@ -242,7 +277,6 @@ class SelRegulator:
         except Exception as e:
             self.ui.statusbar.showMessage(f"Ошибка: {str(e)}")
 
-
     def get_bandwidth(self) -> float:
         """
             Получить пропускную способность
@@ -252,27 +286,110 @@ class SelRegulator:
         except Exception as e:
             self.ui.statusbar.showMessage(f"Ошибка: {str(e)}")
 
-    def get_PIn(self) -> float:
+    def get_pressure(self,ioType:str)->float:
         """
-            Получить входное давление
-        """
-        try:
-            return float(self.ui.input_PIn.text().replace(",", '.'.replace(" ", '')))
-        except Exception as e:
-            self.ui.statusbar.showMessage(f"Ошибка: {str(e)}")
+        Получает значение давления из текстового поля для указанного конца трубопровода.
 
-    def get_POut(self) -> float:
+        Поддерживаемые имена полей: input_Pressure_In, input_Pressure_Out.
+
+        Параметры:
+            ioType (str): "Input" — вход, "Output" — выход.
+
+        Возвращает:
+            float: Значение давления. При ошибке возвращается 0.0 и отображается сообщение.
+
+        Пример:
+            pressure_in = self.get_pressure("Input")
         """
-            Получить выходное давление
-        """
+        if ioType not in ("Input", "Output"):
+            self.ui.statusbar.showMessage("Ошибка: suffix должен быть 'Input' или 'Output'")
+            return 0.0
+
+        widget_name = f"input_Pressure_{ioType}"
         try:
-            return float(self.ui.input_POt.text().replace(",", '.'.replace(" ", '')))
+            widget = getattr(self.ui, widget_name)
+            text = widget.text().replace(",", ".").replace(" ", "")
+            return float(text)
         except Exception as e:
-            self.ui.statusbar.showMessage(f"Ошибка: {str(e)}")            
+            self.ui.statusbar.showMessage(f"Ошибка при чтении давления ({ioType}): {e}")
+            return 0.0
+
+    def set_speed(self,ioType:str,speed:float,gas_speed:float)->None:
+        """
+            Устанавливаем значение скорости в ячейку
+
+        """
+        widget_name = f"lineEdit_gas_speed_{ioType}"
+        try:
+            widget = getattr(self.ui, widget_name)
+            with block_signals(widget):
+                widget.setText(f"{gas_speed:.1f}")
+
+        except Exception as e:
+            self.ui.statusbar.showMessage(f"Ошибка при вставке скорости ({ioType}): {e}")
+
+    def get_speed(self,ioType:str)->int:
+        """
+                Получает значение скорости из текстового поля для указанного конца трубопровода.
+
+                Поддерживаемые имена полей: lineEdit_gas_speed_Input, lineEdit_gas_speed_Output.
+
+                Параметры:
+                    ioType (str): "Input" — вход, "Output" — выход.
+
+                Возвращает:
+                    int: Значение давления. При ошибке возвращается 0 и отображается сообщение.
+
+                Пример:
+                    speed_in = self.get_speed("Input")
+                """
+        if ioType not in ("Input", "Output"):
+            self.ui.statusbar.showMessage("Ошибка: suffix должен быть 'Input' или 'Output'")
+            return 0
+
+        widget_name = f"lineEdit_gas_speed_{ioType}"
+        try:
+            widget = getattr(self.ui, widget_name)
+            text = widget.text().replace(",", ".").replace(" ", "")
+            return int(text)
+        except Exception as e:
+            self.ui.statusbar.showMessage(f"Ошибка при чтении давления ({ioType}): {e}")
+            return 0
 
     def switch_diametr(self) -> None:
         self.speed_or_diametr = "diametr"
         self.ui.pushButton_flag_speed.setChecked(False)
+
+    def get_auto_speed_checked(self,ioType: str) -> bool:
+        """
+        Возвращает состояние флажка автоматической установки скорости
+        для указанного конца трубопровода (вход или выход).
+
+        Параметры:
+            ioType (str): Указывает, о каком конце трубопровода идет речь.
+                          Допустимые значения: 'In' (вход) или 'Out' (выход).
+
+        Возвращает:
+            bool: True, если соответствующий флажок в интерфейсе отмечен,
+                  иначе False.
+
+        Исключения:
+            AttributeError: Если в объекте self.ui отсутствует виджет
+                            с именем QCB_Auto_Speed_{ioType}.
+            ValueError: Если передано недопустимое значение ioType.
+
+        Пример:
+            >>> self.get_auto_speed_checked('In')
+            True
+            >>> self.get_auto_speed_checked('Out')
+            False
+        """
+        if ioType not in ('In', 'Out'):
+            raise ValueError("Параметр 'suffix' должен быть 'In' или 'Out'")
+
+        widget_name = f"QCB_Auto_Speed_{ioType}"
+        widget = getattr(self.ui, widget_name)
+        return widget.isChecked()
 
     def switch_speed(self) -> None:
         self.speed_or_diametr = "speed"
@@ -293,30 +410,30 @@ class SelRegulator:
         gas_consumption = ((pipeline_diameter / 0.36238) ** 2 * (0.1 + gas_pressure / 1000) * gas_speed) / 293
         """
         if (self.speed_or_diametr == "diametr"):
-            self.calculated_diametr()
-            self.calculated_diametr_out()
+            print("Начали расчет диаметр для входа")
+            self.calculated_diametr("Input")
+            print("Начали расчет диаметр для выхода")
+            self.calculated_diametr("Output")
         else:
+            print("Начали расчет")
             self.calculated_speed_in()
             self.calculated_speed_out()
 
-    def __calculate_gas_pipeline_params(self,
-                                      get_pressure_func: Callable[[], Union[str, float, None]],
-                                      diametr_line_edit,
-                                      speed_line_edit,
-                                      auto_speed_checkbox) -> None:
+    def __calculate_gas_pipeline_params(self, pressure: float, speed, auto_speed: bool,gas_consumption) -> float:
         """
         Обобщенный метод для расчета параметров газопровода (Вход или Выход).
 
         Args:
-            get_pressure_func: Функция для получения значения давления (PIn или POut).
-            diametr_line_edit: Объект QLineEdit для диаметра.
-            speed_line_edit: Объект QLineEdit для скорости.
-            auto_speed_checkbox: Объект QCheckBox для автоматического выбора скорости.
+            pressure: давления (PIn или POut).
+            speed: значение скорости.
+            auto_speed: Булево значение для автоматического выбора скорости.
         """
         try:
-            gas_consumption = self.get_bandwidth()  # Предполагаем, что эта функция общая
-            gas_pressure = get_pressure_func()
-            gas_speed = speed_line_edit.text()
+            print("Функция расчета берем параметры")
+            gas_consumption = gas_consumption
+            gas_pressure = pressure
+            gas_speed = speed
+            print("Взяли параметры")
 
             if not gas_consumption or not gas_pressure:
                 return
@@ -327,7 +444,7 @@ class SelRegulator:
             gas_pressure_kpa = float(gas_pressure) * 1000
 
             # Логика автоматического выбора скорости
-            if auto_speed_checkbox.isChecked():
+            if auto_speed:
                 if gas_pressure_kpa < 50:
                     gas_speed = 15.0
                 elif 50 <= gas_pressure_kpa <= 600:
@@ -338,20 +455,11 @@ class SelRegulator:
             gas_speed = float(gas_speed)
 
             # Вызов чистой функции расчета
-            rounded_result = MathMethod.calculate_diameter(gas_consumption, gas_pressure_kpa, gas_speed)
-
-            # --- Обновление GUI с блокировкой сигналов ---
-            # Отключаем сигналы перед изменением
-            diametr_line_edit.blockSignals(True)
-            speed_line_edit.blockSignals(True)
-
-            diametr_line_edit.setText(str(rounded_result))
-            # Форматируем скорость до одного знака после запятой для вывода
-            speed_line_edit.setText(f"{gas_speed:.1f}")
-
-            # Включаем сигналы после изменения
-            diametr_line_edit.blockSignals(False)
-            speed_line_edit.blockSignals(False)
+            print("Математическая функция расчет")
+            print(f"{gas_consumption=},{gas_pressure=},{gas_speed=}")
+            rounded_result = MathMethod.calculated_diametr(gas_consumption, gas_pressure_kpa, gas_speed)
+            print(f"Расчет диаметра{round(rounded_result, 2)=}")
+            return rounded_result
 
         except ValueError:
             self.ui.statusbar.showMessage("Ошибка: неверный ввод. Проверьте числовые поля.")
@@ -359,40 +467,40 @@ class SelRegulator:
             self.ui.statusbar.showMessage("Ошибка: деление на ноль.")
         except Exception as e:
             self.ui.statusbar.showMessage(f"Неизвестная ошибка: {str(e)}")
-    
-    def calculated_diametr(self) -> None:
-        """Слот для ВХОДНОГО газопровода."""
-        self.__calculate_gas_pipeline_params(
-            get_pressure_func=self.get_PIn,
-            diametr_line_edit=self.ui.lineEdit_diametet_of_gas_pipeline,
-            speed_line_edit=self.ui.lineEdit_gas_speed,
-            auto_speed_checkbox=self.ui.QCB_Auto_Speed_In
-        )
 
-    def calculated_diametr_out(self) -> None:
-        """Слот для ВЫХОДНОГО газопровода."""
-        self.__calculate_gas_pipeline_params(
-            get_pressure_func=self.get_POut,
-            diametr_line_edit=self.ui.lineEdit_diametet_of_gas_pipeline_out,
-            speed_line_edit=self.ui.lineEdit_gas_speed_out,
-            auto_speed_checkbox=self.ui.QCB_Auto_Speed_Out
-        )
+
+    def calculated_diametr(self,ioType:str) -> None:
+        """Слот для расчета диаметра трубопровода по скорости"""
+        print(f"Выполняем расчет для диаметра для {ioType=}")
+        pressure = self.get_pressure(ioType)
+        speed = self.get_speed(ioType)
+        gas_consumption = self.get_bandwidth()
+        auto_speed = False
+        print(f"Все параметры для расчета для {ioType=} равны {pressure=},{speed=},{gas_consumption=},{auto_speed=}")
+
+        сalculated_diameter = self.__calculate_gas_pipeline_params(pressure=pressure, speed=speed,
+                                                       auto_speed=auto_speed, gas_consumption = gas_consumption
+                                                       )
+        print(f"Полученный результат диаметра для {сalculated_diameter=} трубопровода ")
+        self.set_valve_diametr(ioType, сalculated_diameter)
+
 
     def calculate_gas_speed(self,
-                            get_pressure_func: Callable[[], Union[str, float, None]],
+                            pressure: float,
                             diametr_line_edit,
                             speed_line_edit) -> None:
         """
         Обобщенный метод для расчета скорости газа (Вход или Выход).
 
         Args:
-            get_pressure_func: Функция для получения значения давления (PIn или POut).
+            pressure: Значение давления
             diametr_line_edit: Объект QLineEdit для диаметра.
             speed_line_edit: Объект QLineEdit для скорости, которую нужно обновить.
         """
+        print("Зашли в расчет")
         try:
             gas_consumption = self.get_bandwidth()  # Предполагаем, что эта функция общая
-            gas_pressure = get_pressure_func()
+            gas_pressure = pressure
             diametr = diametr_line_edit.text()
 
             if not gas_consumption or not gas_pressure or not diametr:
@@ -406,6 +514,7 @@ class SelRegulator:
 
             # Вызов чистой функции расчета
             rounded_result_speed = MathMethod.calculate_speed(gas_consumption, gas_pressure_kpa, diametr)
+            print(f"{round(rounded_result_speed,2)=}")
 
             # --- Обновление GUI с блокировкой сигналов ---
             # Отключаем сигнал перед изменением значения
@@ -426,7 +535,7 @@ class SelRegulator:
     def calculated_speed_in(self) -> None:
         """Слот, вызываемый по изменению диаметра на ВХОДЕ."""
         self.calculate_gas_speed(
-            get_pressure_func=self.get_PIn,
+            pressure=self.get_pressure("Input"),
             diametr_line_edit=self.ui.lineEdit_diametet_of_gas_pipeline,
             speed_line_edit=self.ui.lineEdit_gas_speed
         )
@@ -434,7 +543,7 @@ class SelRegulator:
     def calculated_speed_out(self) -> None:
         """Слот, вызываемый по изменению диаметра на ВЫХОДЕ."""
         self.calculate_gas_speed(
-            get_pressure_func=self.get_POut,
+            pressure=self.get_pressure("Output"),
             diametr_line_edit=self.ui.lineEdit_diametet_of_gas_pipeline_out,
             speed_line_edit=self.ui.lineEdit_gas_speed_out
         )
@@ -467,8 +576,6 @@ class SelRegulator:
             # Сборка пути к папке
             self.conf_file_name = "selRegulConf.json"
             self.conf_file_path = os.path.join(self.current_dir, self.conf_file_name)
-
-
 
             # Проверка существования папки и создание, если не существует
             if not os.path.exists(self.conf_file_path):
@@ -696,8 +803,8 @@ class SelRegulator:
             return self.saved_conf_input_name_file+".txt"
 
         # Сборка пути к файлу
-        name_file = "Pвх-{0} Pвых-{1} ПрСп-{2}.txt".format(self.get_PIn(), 
-                                                    self.get_POut(), 
+        name_file = "Pвх-{0} Pвых-{1} ПрСп-{2}.txt".format(self.get_pressure("Input"),
+                                                    self.get_pressure("Output"),
                                                     self.get_bandwidth())
         
         file_path = os.path.join(self.current_dir, self.folder_save_name, name_file)
@@ -752,8 +859,8 @@ class SelRegulator:
             "Климатическое исполнение": self.get_climate_execution(),
             "Оснащение УИРГ": self.get_uirg_equipment_type(),
             "Количество выходов газопроводов": self.get_number_of_gas_pipeline_outlets(),
-            "Диаметр запорной арматуры на входе": self.get_inlet_valve_diameter(),
-            "Диаметр запорной арматуры на выходе": self.get_outlet_valve_diameter(),
+            "Диаметр запорной арматуры на входе": self.get_valve_diameter("Input"),
+            "Диаметр запорной арматуры на выходе": self.get_valve_diameter("Output"),
             "Направление": self.get_direction_type()
         }
 
@@ -889,7 +996,7 @@ class SelRegulator:
         """start_initial_log добавляет стартовые данные о сканировании в логи"""
         self.__write_log_wrapper("======================")
         self.__write_log_wrapper("Поиск регуляторов по следующим параметрам: Входное давление-{0} \
-                                 Выходное давление-{1} Пропускная способность-{2}".format(self.get_PIn(),self.get_POut(), self.get_bandwidth()))
+                                 Выходное давление-{1} Пропускная способность-{2}".format(self.get_pressure("Input"),self.get_pressure("Output"), self.get_bandwidth()))
         
         # Добавляем информацию о выбранном типе изделия в лог, если она есть
         if hasattr(self, 'selected_product_type') and self.selected_product_type:
@@ -936,11 +1043,11 @@ class SelRegulator:
         """Функция __saved_conf_search, сохраняет конфигурацию
         поиска устройства для отдельного запуска"""
         
-        self.saved_conf_self_file_name_var = self.ui.self_file_name_var.isChecked()
-        self.saved_conf_input_name_file = self.ui.input_name_file.text()
-        self.saved_conf_left_to_right = self.ui.left_to_right.isChecked()
-        self.saved_conf_PZK_position_sensor = self.ui.PZK_position_sensor.isChecked()
-        self.saved_conf_Regulator_for_liquefied_gas = self.ui.Regulator_for_liquefied_gas.isChecked()
+        # self.saved_conf_self_file_name_var = self.ui.self_file_name_var.isChecked()
+        # self.saved_conf_input_name_file = self.ui.input_name_file.text()
+        # self.saved_conf_left_to_right = self.ui.left_to_right.isChecked()
+        # self.saved_conf_PZK_position_sensor = self.ui.PZK_position_sensor.isChecked()
+        # self.saved_conf_Regulator_for_liquefied_gas = self.ui.Regulator_for_liquefied_gas.isChecked()
 
         self.saved_conf_minimum_load = int(self.ui.min_lebel_loading_range.text())
         self.saved_conf_maximum_load =  int(self.ui.max_lebel_loading_range.text())
@@ -1152,7 +1259,7 @@ class SelRegulator:
         Возвращает колличество найденных девайсов в файле."""
 
         regulators_found = 0
-        
+        print(workbook.sheetnames)
         for sheet_name in workbook.sheetnames:
             sheet = workbook[sheet_name]
             
@@ -1169,51 +1276,63 @@ class SelRegulator:
         """
         regulators_found = 0
         filename_log = False
-
+        print("Зашли в функцию")
         listbox_data = self.drop_area.get_file_paths()
+        print("Получили файл")
         self.processed_urls = {}
 
         self.__create_path_folder_for_save()
+        print("Создали директорию по созданию отчета")
 
         for index in range(len(listbox_data)):
             if os.path.splitext(listbox_data[index])[1] == '.xlsx':
                 self.processed_urls[listbox_data[index]] = 0
+        print("Анализ файла первичный")
 
         if len(self.processed_urls) == 0:
             self.show_error_message("Добавьте файлы xlsx")
             return
+        print("На случай недобавленых файлов")
         
         if not self.is_int(self.ui.max_lebel_loading_range.text()) or not self.is_int(self.ui.min_lebel_loading_range.text()):
             self.show_error_message("Некорректный диапазон процента загрузки")
             return
-        
+
+        print("Некорректный диапазон процента загрузки")
+
         #Очищаем виджет с результатами сканирования в самой программе
         self.__clear_widget_res_in_app()
+
+        print("Очистили виджет результатов")
 
         for path_file, _ in self.processed_urls.items():
             try:
                 if path_file.replace(" ", "") != "":
 
                     try:
-                        PIn = self.get_PIn()
-                        POt = self.get_POut()
+                        PIn = self.get_pressure("Input")
+                        POt = self.get_pressure("Output")
                         bandwidth = self.get_bandwidth()
+                        print(PIn,POt,bandwidth)
                     except:
                         self.show_error_message("Введите корректные значения для поиска регулятора")
                         return 
 
                     self.__save_patch_in_conf(path_file)
-
+                    print("Начали поиск")
                     #self.show_info_message(str("Поиск подходящего регулятора запущен"))
                     self.status_text = "В работе"
                     self.update_status_worck("В работе.")
-
+                    print("Проверка входных условий")
                     if PIn != "" and POt!="" and bandwidth!="":
+
+                        ##Вот тут ошибка
                         self.__saved_conf_search()
+                        ###
 
                         #Открываем файл экселя
                         workbook = openpyxl.load_workbook(os.path.normpath(path_file))
-
+                        print("Открыли файл екселя")
                         #Если не был создан файл логов, создаём его
                         if not filename_log:
                             filename_log = self.__res_file_name()
@@ -1222,13 +1341,14 @@ class SelRegulator:
 
                         #Пишем в файл лога стартовые данные поиска
                         self.start_initial_log()
+                        print("Записали в файл лога стартовые данные поиска")
                         #Запуск функции анализа
 
                         regulators_found += self.conduct_analysis(workbook, 
                                                                 PIn,
                                                                 POt, 
                                                                 bandwidth)
-
+                        print("Проверка найнедых количества регуляторов")
                         if regulators_found == 0:
                             self.__write_log_wrapper("Точного совпадения не найдено")
                             self.__write_log_wrapper("Попытка найти регулятор с близкими параметрами.")
