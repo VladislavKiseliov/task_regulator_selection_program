@@ -102,8 +102,37 @@ class SheetImageLoader:
 pyinstaller --windowed --onefile --icon=icon.ico --name="Помощник конструктора ГПМ" --add-data "icon.ico;." selRegulator.py --additional-hooks-dir=.
 
 """
+import sys
+
+from PyQt5 import QtWidgets
+from PyQt5.QtWidgets import QApplication
+
 from src.index import SelRegulator
+from src.controller import Controller
+from src.utils.logger_config import setup_logger, create_log_file
+from src.utils.CallbackRegister import CallbackRegistry
 
 if __name__ == "__main__":
-    SelRegulator().draw_window()
-    
+    log_filename = create_log_file()
+    logger = setup_logger(log_filename)
+    logger.info("Запуск приложения расчета ГРС")
+
+    # 1. Создаём QApplication (ОДИН РАЗ)
+    app = QApplication(sys.argv)
+
+    try:
+        # 2. Инициализируем компоненты
+        callback_registry = CallbackRegistry()
+        sel_regulator = SelRegulator(callback_registry)
+        controller = Controller(sel_regulator, callback_registry)
+
+        # 3. Показываем окно
+        sel_regulator.draw_window()
+
+
+        # 4. Запускаем цикл событий (ОБЯЗАТЕЛЬНО)
+        sys.exit(app.exec_())
+
+    except Exception as e:
+        print(f"Ошибка: {e}")
+        sys.exit(1)

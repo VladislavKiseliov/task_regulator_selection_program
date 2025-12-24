@@ -37,3 +37,52 @@ def calculate_speed(gas_consumption: float, gas_pressure_kpa: float, diameter_mm
 
 def calculate_diameter(gas_consumption, gas_pressure_kpa, gas_speed):
     return None
+
+# Посмотреть и привести к такому
+# import math
+#
+# # Константы расчёта
+# PIPELINE_FACTOR = 0.036238  # безразмерный коэффициент
+# TEMPERATURE_CONSTANT = 293  # К (абсолютная температура)
+# PRESSURE_OFFSET = 0.1  # МПа (базовое давление)
+# MM_SCALING = 10  # множитель для перевода в мм
+# def calculated_diametr(
+#         gas_consumption: float,  # м³/ч (расход газа)
+#         gas_pressure: float,  # кПа (давление)
+#         gas_speed: float  # м/с (скорость газа)
+# ) -> float | None:  # мм (диаметр, округлён вверх)
+#     """
+#     Рассчитывает диаметр газопровода по формуле:
+#
+#     D = PIPELINE_FACTOR × √[ (Q × TEMPERATURE_CONSTANT) / ((PRESSURE_OFFSET + P_МПа) × V) ] × MM_SCALING
+#
+#     Где:
+#     - Q — расход газа (м³/ч)
+#     - P_МПа — давление в МПа (переводится из кПа)
+#     - V — скорость газа (м/с)
+#
+#     Returns:
+#         Диаметр в миллиметрах (округлённый вверх) или None при ошибке.
+#     """
+#     # Проверка валидности входных данных
+#     if (gas_consumption <= 0 or
+#             gas_pressure < 0 or
+#             gas_speed <= 0):
+#         return None
+#
+#     # Перевод давления в МПа
+#     pressure_mpa = gas_pressure / 1000
+#
+#     # Защита от деления на ноль
+#     if PRESSURE_OFFSET + pressure_mpa <= 0:
+#         return None
+#
+#     # Основной расчёт
+#     try:
+#         diameter_mm = PIPELINE_FACTOR * math.sqrt(
+#             (gas_consumption * TEMPERATURE_CONSTANT) /
+#             ((PRESSURE_OFFSET + pressure_mpa) * gas_speed)
+#         ) * MM_SCALING
+#         return math.ceil(diameter_mm)
+#     except (ValueError, OverflowError):
+#         return None

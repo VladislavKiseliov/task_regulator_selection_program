@@ -4,6 +4,8 @@ from imports import *
 from pathlib import Path
 from contextlib import contextmanager
 
+from src.utils.CallbackRegister import CallbackRegistry
+
 
 @contextmanager
 def block_signals(widget):
@@ -16,7 +18,7 @@ def block_signals(widget):
 
 
 class SelRegulator:
-    def __init__(self):
+    def __init__(self,callback_registry: CallbackRegistry):
         """
         Конструктор класса SelRegulator.
 
@@ -46,7 +48,7 @@ class SelRegulator:
         self.__conf_file_loader()
         self.__create_path_folder_for_save()
 
-        self.app = QtWidgets.QApplication(sys.argv)
+        # self.app = QtWidgets.QApplication(sys.argv)
         
         self.MainWindow = QtWidgets.QMainWindow()
         self.ui = Ui_MainWindow()
@@ -59,12 +61,12 @@ class SelRegulator:
         self.ui.pushButton_flag_speed.setChecked(False)
 
         self.change_speed = False
-        
+
         try:
-            self.app.setWindowIcon(QIcon('icon.ico'))
-            self.MainWindow.setWindowIcon(QIcon('icon.ico'))
-        except:
-            pass
+            # Удаляем строку с self.app!
+            self.MainWindow.setWindowIcon(QIcon('icon.ico'))  # Только для окна
+        except Exception as e:
+            print(f"Не удалось установить иконку: {e}")  # Лучше выводить ошибку
 
         self.action_menu_2 = QAction("Помощь", self.MainWindow)
         # Добавляем этот QAction на QMenuBar
@@ -72,7 +74,10 @@ class SelRegulator:
 
         self.__drop_area_create();
         self.__connect_config();
+        self.callback = callback_registry
     
+    def show_error(self,error:str):
+        self.ui.statusbar.showMessage(error)
 
     def __connect_config(self) -> None:
         """
@@ -109,10 +114,12 @@ class SelRegulator:
         self.action_menu_2.triggered.connect(self.show_about)
 
         # Кнопка "Выполнить расчет" - вызывает метод make_calculation
-        self.ui.pushButton_make_calculation.clicked.connect(self.make_calculation)
+        self.ui.pushButton_make_calculation.clicked.connect(lambda: self.callback.trigger("make_calculation"))
 
-        # Кнопка "Подобрать изделие" - вызывает метод select_product_type
-        self.ui.pushButton_selected_scheme.clicked.connect(self.select_product_type)
+        # # Кнопка "Подобрать изделие" - вызывает метод select_product_type
+        # self.ui.pushButton_selected_scheme.clicked.connect(self.select_product_type)
+        # self.ui.pushButton_selected_scheme.clicked.connect(lambda : self.show_error_message("Error"))
+        self.ui.pushButton_selected_scheme.clicked.connect(lambda: self.show_error("Error"))
 
         #Подключение событий изменения текста в полях калькулятора
 
@@ -243,7 +250,7 @@ class SelRegulator:
                     pressure_in = self.get_pressure("Input")
                 """
         if ioType not in ("Input", "Output"):
-            self.ui.statusbar.showMessage("Ошибка: ioType должен быть 'Input' или 'Output'")
+            self.show_error("Ошибка: ioType должен быть 'Input' или 'Output'")
             return 0
 
         widget_name = f"lineEdit_diameter_of_gas_pipeline_{ioType}"
@@ -252,7 +259,7 @@ class SelRegulator:
             text = widget.text().replace(",", ".").replace(" ", "")
             return int(text)
         except Exception as e:
-            self.ui.statusbar.showMessage(f"Ошибка при чтении диаметра ({ioType}): {e}")
+            self.show_error(f"Ошибка при чтении диаметра ({ioType}): {e}")
             return 0
 
     def set_valve_diametr(self,ioType:str,diametr:int)->None:
@@ -266,7 +273,7 @@ class SelRegulator:
                 widget.setText(str(diametr))
 
         except Exception as e:
-            self.ui.statusbar.showMessage(f"Ошибка при вставке диаметра ({ioType}): {e}")
+            self.show_error(f"Ошибка при вставке диаметра ({ioType}): {e}")
 
     def get_direction_type(self) -> str:
         """
@@ -314,7 +321,7 @@ class SelRegulator:
             self.ui.statusbar.showMessage(f"Ошибка при чтении давления ({ioType}): {e}")
             return 0.0
 
-    def set_speed(self,ioType:str,speed:float,gas_speed:float)->None:
+    def set_speed(self,ioType:str,gas_speed:float)->None:
         """
             Устанавливаем значение скорости в ячейку
 
@@ -326,7 +333,7 @@ class SelRegulator:
                 widget.setText(f"{gas_speed:.1f}")
 
         except Exception as e:
-            self.ui.statusbar.showMessage(f"Ошибка при вставке скорости ({ioType}): {e}")
+            self.show_error(f"Ошибка при вставке скорости ({ioType}): {e}")
 
     def get_speed(self,ioType:str)->int:
         """
@@ -344,7 +351,7 @@ class SelRegulator:
                     speed_in = self.get_speed("Input")
                 """
         if ioType not in ("Input", "Output"):
-            self.ui.statusbar.showMessage("Ошибка: suffix должен быть 'Input' или 'Output'")
+            self.show_error("Ошибка: suffix должен быть 'Input' или 'Output'")
             return 0
 
         widget_name = f"lineEdit_gas_speed_{ioType}"
@@ -353,7 +360,7 @@ class SelRegulator:
             text = widget.text().replace(",", ".").replace(" ", "")
             return int(text)
         except Exception as e:
-            self.ui.statusbar.showMessage(f"Ошибка при чтении давления ({ioType}): {e}")
+            self.show_error(f"Ошибка при чтении давления ({ioType}): {e}")
             return 0
 
     def switch_diametr(self) -> None:
@@ -394,159 +401,6 @@ class SelRegulator:
     def switch_speed(self) -> None:
         self.speed_or_diametr = "speed"
         self.ui.pushButton_flag_diametr.setChecked(False)
-
-    def make_calculation(self) -> None:
-        """
-        Метод определения метода расчета в зависимости от наличия значения потребления газа.
-
-        Вызывает методы calculate_gas_consumption или calculate_pressure_and_speed в зависимости
-        от наличия значения в поле ввода потребления газа.
-
-
-        Формула для расчёта давления газа при данном диаметре трубопровода и скорости газа
-        gas_pressure = 1000 * ((gas_consumption * 293) / ((pipeline_diameter / 0.36238) ** 2 * gas_speed) - 0.1)
-
-        Формула для расчёта расхода газа при данном давлении и диаметре трубопровода
-        gas_consumption = ((pipeline_diameter / 0.36238) ** 2 * (0.1 + gas_pressure / 1000) * gas_speed) / 293
-        """
-        if (self.speed_or_diametr == "diametr"):
-            print("Начали расчет диаметр для входа")
-            self.calculated_diametr("Input")
-            print("Начали расчет диаметр для выхода")
-            self.calculated_diametr("Output")
-        else:
-            print("Начали расчет")
-            self.calculated_speed_in()
-            self.calculated_speed_out()
-
-    def __calculate_gas_pipeline_params(self, pressure: float, speed, auto_speed: bool,gas_consumption) -> float:
-        """
-        Обобщенный метод для расчета параметров газопровода (Вход или Выход).
-
-        Args:
-            pressure: давления (PIn или POut).
-            speed: значение скорости.
-            auto_speed: Булево значение для автоматического выбора скорости.
-        """
-        try:
-            print("Функция расчета берем параметры")
-            gas_consumption = gas_consumption
-            gas_pressure = pressure
-            gas_speed = speed
-            print("Взяли параметры")
-
-            if not gas_consumption or not gas_pressure:
-                return
-
-            # Конвертация и масштабирование
-            gas_consumption = float(gas_consumption)
-            # Умножаем на 1000 для перевода МПа в кПа (как в исходном коде)
-            gas_pressure_kpa = float(gas_pressure) * 1000
-
-            # Логика автоматического выбора скорости
-            if auto_speed:
-                if gas_pressure_kpa < 50:
-                    gas_speed = 15.0
-                elif 50 <= gas_pressure_kpa <= 600:
-                    gas_speed = 25.0
-                else:
-                    gas_speed = 30.0
-
-            gas_speed = float(gas_speed)
-
-            # Вызов чистой функции расчета
-            print("Математическая функция расчет")
-            print(f"{gas_consumption=},{gas_pressure=},{gas_speed=}")
-            rounded_result = MathMethod.calculated_diametr(gas_consumption, gas_pressure_kpa, gas_speed)
-            print(f"Расчет диаметра{round(rounded_result, 2)=}")
-            return rounded_result
-
-        except ValueError:
-            self.ui.statusbar.showMessage("Ошибка: неверный ввод. Проверьте числовые поля.")
-        except ZeroDivisionError:
-            self.ui.statusbar.showMessage("Ошибка: деление на ноль.")
-        except Exception as e:
-            self.ui.statusbar.showMessage(f"Неизвестная ошибка: {str(e)}")
-
-
-    def calculated_diametr(self,ioType:str) -> None:
-        """Слот для расчета диаметра трубопровода по скорости"""
-        print(f"Выполняем расчет для диаметра для {ioType=}")
-        pressure = self.get_pressure(ioType)
-        speed = self.get_speed(ioType)
-        gas_consumption = self.get_bandwidth()
-        auto_speed = False
-        print(f"Все параметры для расчета для {ioType=} равны {pressure=},{speed=},{gas_consumption=},{auto_speed=}")
-
-        сalculated_diameter = self.__calculate_gas_pipeline_params(pressure=pressure, speed=speed,
-                                                       auto_speed=auto_speed, gas_consumption = gas_consumption
-                                                       )
-        print(f"Полученный результат диаметра для {сalculated_diameter=} трубопровода ")
-        self.set_valve_diametr(ioType, сalculated_diameter)
-
-
-    def calculate_gas_speed(self,
-                            pressure: float,
-                            diametr_line_edit,
-                            speed_line_edit) -> None:
-        """
-        Обобщенный метод для расчета скорости газа (Вход или Выход).
-
-        Args:
-            pressure: Значение давления
-            diametr_line_edit: Объект QLineEdit для диаметра.
-            speed_line_edit: Объект QLineEdit для скорости, которую нужно обновить.
-        """
-        print("Зашли в расчет")
-        try:
-            gas_consumption = self.get_bandwidth()  # Предполагаем, что эта функция общая
-            gas_pressure = pressure
-            diametr = diametr_line_edit.text()
-
-            if not gas_consumption or not gas_pressure or not diametr:
-                return
-
-            # Конвертация и масштабирование
-            gas_consumption = float(gas_consumption)
-            # Умножаем на 1000 для перевода МПа в кПа
-            gas_pressure_kpa = float(gas_pressure) * 1000
-            diametr = float(diametr)
-
-            # Вызов чистой функции расчета
-            rounded_result_speed = MathMethod.calculate_speed(gas_consumption, gas_pressure_kpa, diametr)
-            print(f"{round(rounded_result_speed,2)=}")
-
-            # --- Обновление GUI с блокировкой сигналов ---
-            # Отключаем сигнал перед изменением значения
-            speed_line_edit.blockSignals(True)
-
-            speed_line_edit.setText(str(rounded_result_speed))
-
-            # Включаем сигнал после изменения значения
-            speed_line_edit.blockSignals(False)
-
-        except ValueError:
-            self.ui.statusbar.showMessage("Ошибка: неверный ввод. Проверьте числовые поля.")
-        except ZeroDivisionError:
-            self.ui.statusbar.showMessage("Ошибка: деление на ноль.")
-        except Exception as e:
-            self.ui.statusbar.showMessage(f"Неизвестная ошибка: {str(e)}")
-
-    def calculated_speed_in(self) -> None:
-        """Слот, вызываемый по изменению диаметра на ВХОДЕ."""
-        self.calculate_gas_speed(
-            pressure=self.get_pressure("Input"),
-            diametr_line_edit=self.ui.lineEdit_diametet_of_gas_pipeline,
-            speed_line_edit=self.ui.lineEdit_gas_speed
-        )
-
-    def calculated_speed_out(self) -> None:
-        """Слот, вызываемый по изменению диаметра на ВЫХОДЕ."""
-        self.calculate_gas_speed(
-            pressure=self.get_pressure("Output"),
-            diametr_line_edit=self.ui.lineEdit_diametet_of_gas_pipeline_out,
-            speed_line_edit=self.ui.lineEdit_gas_speed_out
-        )
 
     def __drop_area_create(self) -> None:
         # Создаем виджет DropArea и добавляем его в scrollArea_2
@@ -593,8 +447,6 @@ class SelRegulator:
         except:
             pass
 
-           
-    
     def __add_load_save_path(self):
         #Добавляем полученные пути в лайibel для путей если они доступны
         for file in self.file_path_list:
@@ -646,7 +498,6 @@ class SelRegulator:
         self.ui.plainTextEdit.setReadOnly(False)  # Установка режима редактирования
         self.ui.plainTextEdit.clear()  # Очистка содержимого виджета
         self.ui.plainTextEdit.setReadOnly(True)  # Возвращение в режим только для чтения
-
 
     def __write_log_wrapper(self, mess:str) ->None:
         """Функция для добавления данных в виджет логирования в программе"""
@@ -784,7 +635,6 @@ class SelRegulator:
         if file_path:
             self.drop_area.add_file(file_path)
 
-
     def __file_placed_drop_zone(self, e:str) -> None:
         """Функция __file_placed_drop_zone, отвечает
         за добавление и форматировании пути файла
@@ -834,163 +684,6 @@ class SelRegulator:
                                                "Пропускная":found_bandwidth,
                                                "Необходимая":need_bandwidth,
                                                "Процент":"{:.2f}".format(100-(((int(found_bandwidth)-int(need_bandwidth))/int(found_bandwidth))*100))}
-        
-    def select_product_type(self) -> None:
-        """
-        Метод для обработки выбора типа изделия (ГРПБ, ГРПШ, ГРУ).
-        Собирает данные о выбранном типе изделия и сохраняет их.
-        """
-        print(1)
-        # # Получаем выбранный тип изделия из комбо-бокса
-        selected_product = self.ui.comboBox_product_type.currentText()
-        # #
-        # # # Сохраняем информацию о выбранном типе изделия
-        self.selected_product_type = selected_product
-        #
-        # # Собираем дополнительную информацию о конфигурации газового оборудования
-        gas_equipment_config = {
-            "Тип изделия": selected_product,
-            "Количество рабочих линий": self.get_count_work_line(),
-            "Количество резервных линий": self.get_backup_lines(),
-            "Наличие съемной резервной линии": self.get_removable_backup_line(),
-            "Исполнение по СТО ГПРГ": self.get_sto_gprg_execution(),
-            "Обогрев": self.get_heating_type(),
-            "Телеметрия": self.get_telemetry_type(),
-            "Климатическое исполнение": self.get_climate_execution(),
-            "Оснащение УИРГ": self.get_uirg_equipment_type(),
-            "Количество выходов газопроводов": self.get_number_of_gas_pipeline_outlets(),
-            "Диаметр запорной арматуры на входе": self.get_valve_diameter("Input"),
-            "Диаметр запорной арматуры на выходе": self.get_valve_diameter("Output"),
-            "Направление": self.get_direction_type()
-        }
-
-        # # Сохраняем всю конфигурацию
-        self.gas_equipment_config = gas_equipment_config
-        #
-        # # Выводим сообщение в строке состояния
-        # self.ui.statusbar.showMessage(f"Выбран тип изделия: {selected_product}", 3000)
-
-        print(f"{gas_equipment_config=}")
-        self.search_file_name()
-
-        
-        # Здесь можно добавить дополнительную логику обработки выбранного типа изделия
-        # Например, изменение интерфейса в зависимости от выбранного типа
-
-    def search_file_name(self):
-        """
-            Формирует номенклатурную строку изделия (например, ГРПШ_РДНК-50-400(1000)_1-1_0_4_0_0_У1_0_1_50-50_Л-П)
-            на основе словаря self.gas_equipment_config.
-            """
-
-        # ПРОВЕРКА: Проверка наличия и заполненности словаря
-        if not hasattr(self, 'gas_equipment_config') or not self.gas_equipment_config:
-            # В случае ошибки возвращаем пустую строку
-            return ""
-
-        # Получаем конфигурацию
-        config: Dict[str, Any] = self.gas_equipment_config
-
-        # -----------------------------------------------------------
-        # 2.1. Расчетные и фиксированные части
-        # -----------------------------------------------------------
-
-        # ВАЖНО: Модель регулятора (например, РДНК-50-400(1000)) должна быть определена
-        # в другом месте (после подбора) и сохранена, например, в self.regulator_model_name.
-        regulator_part = "РДНК-50-400(1000)"
-
-        # -----------------------------------------------------------
-        # 2.2. Преобразование значений из словаря в кодовые части
-        # -----------------------------------------------------------
-
-        # 1. Тип изделия: ГРПШ
-        product_type = str(config.get("Тип изделия", ""))
-
-        # 2. Блок линий: 1-1_0 (рабочие-резервные_съемная)
-        working_lines = str(config.get("Количество рабочих линий", 0))
-        reserve_lines = str(config.get("Количество резервных линий", 0))
-        removable_reserve = str(config.get("Наличие съемной резервной линии", 0))
-        lines_block = f"{working_lines}-{reserve_lines}_{removable_reserve}"
-
-        # 3. Исполнение по СТО: 4
-        sto_gprg_full = str(config.get("Исполнение по СТО ГПРГ", "0"))
-
-
-        # 4. Обогрев: 0
-        heating_value = str(config.get("Обогрев", "0"))
-
-        # 5. Телеметрия: 0
-        telemetry_value = str(config.get("Телеметрия", "0"))
-
-        # 6. Климатическое исполнение: У1
-        climate_code = str(config.get("Климатическое исполнение", "У1"))
-
-        # 7. Оснащение УИРГ: 0
-        uirg_equipment_full = str(config.get("Оснащение УИРГ", "0"))
-
-        # 8. Количество выходов: 1
-        gas_outputs = str(config.get("Количество выходов газопроводов", 1))
-
-        # 9. Диаметры: 50-50
-        valve_diameter_in = str(config.get("Диаметр запорной арматуры на входе", "НД"))
-        valve_diameter_out = str(config.get("Диаметр запорной арматуры на выходе", "НД"))
-        diameters_block = f"{valve_diameter_in}-{valve_diameter_out}"
-
-        # 10. Направление: Л-П
-        direction_value = str(config.get("Направление", "Л-П"))
-
-        # -----------------------------------------------------------
-        # 3. Сборка финальной строки в нужной последовательности
-        # -----------------------------------------------------------
-
-        parts = [
-            product_type,
-            regulator_part,
-            lines_block,
-            sto_gprg_full,
-            heating_value,
-            telemetry_value,
-            climate_code,
-            uirg_equipment_full,
-            gas_outputs,
-            diameters_block,
-            direction_value
-        ]
-
-        # Объединяем все части через разделитель "_"
-        print("_".join(map(str, parts)))
-        stri = "_".join(map(str, parts))
-
-        selected_product = stri.split("_")[0]
-        regulator = (stri.split("_")[1]).split("-")[0]
-        print(selected_product, regulator)
-
-
-
-        # 1. Объединение частей пути с помощью оператора /
-        # Python сам поставит нужный разделитель: '\' для Windows или '/' для Linux/Mac.
-        folder = "Каталог"
-        sub_folder = selected_product
-        sub_sub_folder = regulator
-        file_name = stri + ".cdw"
-
-        file_path = Path(folder) / sub_folder /sub_sub_folder/ file_name
-
-        print(f"Путь: {file_path}")
-
-        # 2. Объединение с текущим рабочим каталогом
-        full_path = Path.cwd() / file_path
-        print(f"Полный путь: {full_path}")
-
-        current_text = self.ui.plainTextEdit_2.toPlainText()
-        new_text = current_text + "\n" + self.__split_and_insert_newline(str(full_path))
-        self.ui.plainTextEdit_2.setPlainText(new_text)
-        if full_path.exists():
-
-            print(f"Путь существует: {full_path}")
-
-        else:
-            print(f"Путь не существует: {full_path}")
 
     def start_initial_log(self) -> None:
         """start_initial_log добавляет стартовые данные о сканировании в логи"""
@@ -1032,7 +725,6 @@ class SelRegulator:
             self.__write_log_wrapper("Седло: {}".format(value["Седло"]))
             self.__write_log_wrapper("Пропускная способность регулятора при выбранных параметрах: {}".format(value["Пропускная"]))
             self.__write_log_wrapper("Процент загрузки пропускной спос. регулятора c необходимой пропускной способностью ({}) составляет {}%".format(value["Необходимая"],value["Процент"]))
-        
 
     def __clear_data_found_device(self) -> None:
         """очищает списки найденных регуляторов"""
@@ -1448,7 +1140,6 @@ class SelRegulator:
         
         about_window.exec_()
 
-
     def draw_window(self) -> None:
         """
         Функция для отображения графического пользовательского интерфейса (GUI). 
@@ -1486,4 +1177,3 @@ class SelRegulator:
         #self.root.mainloop()
 
         self.MainWindow.show()
-        sys.exit(self.app.exec_())
