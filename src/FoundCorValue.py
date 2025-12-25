@@ -1,6 +1,9 @@
 import math
 from decimal import Decimal
 from src.MiniFunc import *
+import logging
+
+
 class FoundCorValue:
     """Определяет, наиболее близкие значения входного и выходного
      давления которые реально есть в таблице. Используется тогда, когда
@@ -9,6 +12,11 @@ class FoundCorValue:
         self.workbook = workbook
         self.input_press = input_press
         self.output_press = output_press
+        self.logger = logging.getLogger("App.FoundCorValue")
+        self.logger.info(
+            "Инициализирован FoundCorValue: input_press=%.4f, output_press=%.4f",
+            input_press, output_press
+        )
 
     def finding_an_exact_match(self,
                          workbook:str,
@@ -16,11 +24,15 @@ class FoundCorValue:
                          output_pressure:float) -> int:
         """Функция determine_type_table, распарсивает экселевский файл
         и выбирает подходящий алгоритм для его обработки."""
-
+        self.logger.debug(
+            "Поиск точного совпадения: inlet=%.4f, output=%.4f",
+            inlet_pressure, output_pressure
+        )
         exact_match = 0
         
         for sheet_name in workbook.sheetnames:
             sheet = workbook[sheet_name]
+            self.logger.debug("Проверяем лист: %s", sheet_name)
             
             exact_match+=self.search_several_controller_table_algorithm_introductory_notes(inlet_pressure,output_pressure,sheet)
 
@@ -64,6 +76,7 @@ class FoundCorValue:
         данные поиска и лист с таблицей формата: несколько устройств
         на одном листе. Если в таблице есть точные совпадения ячейки и столбца по
         входным параметрам, тогда возвращает 1, в противном случае 0"""
+
         for sheet_name in workbook.sheetnames:
             sheet = workbook[sheet_name]
 

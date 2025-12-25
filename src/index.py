@@ -3,17 +3,18 @@ import src.utils.MathMethod as MathMethod
 from imports import *
 from pathlib import Path
 from contextlib import contextmanager
+import logging
 
 from src.utils.CallbackRegister import CallbackRegistry
 
 
 @contextmanager
 def block_signals(widget):
-    widget.blockSignals(True)      # ← 1. Делаем что-то ПЕРЕД
+    widget.blockSignals(True)
     try:
-        yield widget               # ← 2. «Пауза» — выполняется тело `with`
+        yield widget
     finally:
-        widget.blockSignals(False) # ← 3. Делаем что-то ПОСЛЕ (даже при ошибке)
+        widget.blockSignals(False)
 
 
 
@@ -34,6 +35,8 @@ class SelRegulator:
         - data_conf: конфигурационный словарь с путями
         - status_animation: итератор для анимации статуса
         """
+        self.log = logging.getLogger("App.SelRegulator")
+        self.log.info("Главное окно запущенно")
         self.list_in_range_value = []
         self.file_path_list = []
         self.data = {}
@@ -402,6 +405,40 @@ class SelRegulator:
         self.speed_or_diametr = "speed"
         self.ui.pushButton_flag_diametr.setChecked(False)
 
+    def get_loading_range(self) -> tuple[int, int]:
+        """
+        Получает и валидирует диапазон процента загрузки из UI.
+
+        Returns:
+            Кортеж (min_load, max_load) — целые числа в диапазоне [0, 100],
+            причём min_load <= max_load.
+
+        Raises:
+            ValueError: если значения отсутствуют, не являются целыми числами
+                        или выходят за допустимые пределы.
+        """
+        min_text = self.ui.min_lebel_loading_range.text().strip()
+        max_text = self.ui.max_lebel_loading_range.text().strip()
+
+        if not min_text or not max_text:
+            raise ValueError("Диапазон загрузки: оба поля должны быть заполнены.")
+
+        try:
+            min_val = int(min_text)
+            max_val = int(max_text)
+        except ValueError:
+            raise ValueError("Диапазон загрузки: значения должны быть целыми числами.")
+
+        if not (0 <= min_val <= 100):
+            raise ValueError("Минимальный процент загрузки должен быть от 0 до 100.")
+        if not (0 <= max_val <= 100):
+            raise ValueError("Максимальный процент загрузки должен быть от 0 до 100.")
+        if min_val > max_val:
+            raise ValueError("Минимальное значение не может быть больше максимального.")
+
+        return min_val, max_val
+
+
     def __drop_area_create(self) -> None:
         # Создаем виджет DropArea и добавляем его в scrollArea_2
         self.drop_area = DropArea();
@@ -665,18 +702,18 @@ class SelRegulator:
         """Функция __logging_found_device, добавляет
         в словарь найденных устройств новые записи
         об устройствах"""
-
+        print(f"{saddle=}")
         for i in saddle.split():
             if self.is_int(i):
                 saddle=i
         
         #name_devace+="/"+saddle
 
-        if self.saved_conf_left_to_right:
-            name_devace+='-01'
-        
-        if self.saved_conf_PZK_position_sensor:
-            name_devace+=' Д'
+        # if self.saved_conf_left_to_right:
+        #     name_devace+='-01'
+        #
+        # if self.saved_conf_PZK_position_sensor:
+        #     name_devace+=' Д'
 
         self.data_found_id+=1
         self.data_found[self.data_found_id] = {"Регулятор":name_devace,
@@ -739,7 +776,7 @@ class SelRegulator:
         # self.saved_conf_input_name_file = self.ui.input_name_file.text()
         # self.saved_conf_left_to_right = self.ui.left_to_right.isChecked()
         # self.saved_conf_PZK_position_sensor = self.ui.PZK_position_sensor.isChecked()
-        # self.saved_conf_Regulator_for_liquefied_gas = self.ui.Regulator_for_liquefied_gas.isChecked()
+        self.saved_conf_Regulator_for_liquefied_gas = False
 
         self.saved_conf_minimum_load = int(self.ui.min_lebel_loading_range.text())
         self.saved_conf_maximum_load =  int(self.ui.max_lebel_loading_range.text())
@@ -761,6 +798,7 @@ class SelRegulator:
         for row in sheet.iter_rows(values_only=True):
             if i_row == 0:
                 saddle = row[0]
+                print(f"saddle: {saddle=}")
             
             for i_cell in range(len(row)):
                 if i_row == 2 and i_cell!=0:
@@ -786,7 +824,7 @@ class SelRegulator:
                                             if self.is_int(row_scr[i_cell]):
 
                                                 #Проверяем, найденная пропускная способность больше ли необходимой, и является ли регулятор для сжиженного газа если необходимо
-                                                if int(row_scr[i_cell]) >= bandwidth and (("Ж" in name_devace or "ж" in name_devace) == self.saved_conf_Regulator_for_liquefied_gas):
+                                                if int(row_scr[i_cell]) >= bandwidth:
                                                     regulators_found+=1
                                                     self.__logging_found_device(name_devace, saddle, row_scr[i_cell], bandwidth, traffic_capacity)
 
@@ -797,7 +835,7 @@ class SelRegulator:
                                             bandwidth = int(traffic_capacity)
                                             #Проверяем можем ли мы перевести значение пропускной способности в число
                                             if self.is_int(row_scr[i_cell]):
-                                                if int(row_scr[i_cell]) >= bandwidth and (("Ж" in name_devace or "ж" in name_devace) == self.saved_conf_Regulator_for_liquefied_gas):
+                                                if int(row_scr[i_cell]) >= bandwidth:
                                                     regulators_found+=1
                                                     self.__logging_found_device(name_devace, saddle, row_scr[i_cell], bandwidth, traffic_capacity)
 
@@ -818,7 +856,7 @@ class SelRegulator:
                                             bandwidth = int(self.traffic_capacity)+(int(self.traffic_capacity)/100)
                                             #Проверяем можем ли мы перевести значение пропускной способности в число
                                             if self.is_int(row_scr[i_cell]):
-                                                if int(row_scr[i_cell]) >= bandwidth and (("Ж" in name_devace or "ж" in name_devace) == self.saved_conf_Regulator_for_liquefied_gas):
+                                                if int(row_scr[i_cell]) >= bandwidth :
                                                     regulators_found+=1
                                                     self.__logging_found_device(name_devace, saddle, row_scr[i_cell], bandwidth, traffic_capacity)
                                     
@@ -829,7 +867,7 @@ class SelRegulator:
                                             #Проверяем можем ли мы перевести значение пропускной способности в число
                                             if self.is_int(row_scr[i_cell]):          
                                                 #Если это значение больше или равно необходимого
-                                                if int(row_scr[i_cell]) >= bandwidth and ((("Ж" in name_devace) or ("ж" in name_devace)) == self.saved_conf_Regulator_for_liquefied_gas):
+                                                if int(row_scr[i_cell]) >= bandwidth :
                                                     regulators_found+=1
                                                     self.__logging_found_device(name_devace, saddle, row_scr[i_cell], bandwidth, traffic_capacity)
                                     
@@ -851,7 +889,7 @@ class SelRegulator:
         # Put your sheet in the loader
         regulators_found = 0
         i_row = 0
-
+        self.log.info(f"Обрабатываем лист {sheet.title=}")
         for row in sheet.iter_rows(values_only=True):
             if i_row == 0:
                 name_devace = row[0]
@@ -939,7 +977,7 @@ class SelRegulator:
                                     
                                 row_scr_i+=1
             i_row += 1
-
+        print(f"search one contoller table algoritm {regulators_found=}")
         return regulators_found
 
     def conduct_analysis(self, workbook:str,
@@ -949,18 +987,48 @@ class SelRegulator:
         """Функция conduct_analysis, распарсивает экселевский файл
         и ищет подходящие ячейки по входным данным.
         Возвращает колличество найденных девайсов в файле."""
+        self.log.info("Начинаем анализ Excel-файла: %s", workbook)
+        self.log.debug("Доступные листы в книге: %s", workbook.sheetnames)
 
         regulators_found = 0
-        print(workbook.sheetnames)
+        print(f"{workbook.sheetnames=}")
+
+
         for sheet_name in workbook.sheetnames:
             sheet = workbook[sheet_name]
-            
-            if sheet["C1"].value == "" or sheet["C1"].value == None:
-                regulators_found+=self.search_one_controller_table_algorithm(inlet_pressure,output_pressure,traffic_capacity,sheet)
-            else:
-                regulators_found+=self.search_several_controller_table_algorithm(inlet_pressure,output_pressure,traffic_capacity,sheet)
+            self.log.debug("Обрабатываем лист: %s", sheet_name)
 
-            
+            try:
+                # Проверяем признак типа таблицы в ячейке C1
+                c1_value = sheet["C1"].value
+                self.log.debug("Значение в C1 на листе %s: %r", sheet_name, c1_value)
+
+                if c1_value is None or c1_value == "":
+                    self.log.info("Лист %s: обнаружен формат «один регулятор на лист»", sheet_name)
+                    found = self.search_one_controller_table_algorithm(
+                        inlet_pressure, output_pressure, traffic_capacity, sheet
+                    )
+                    regulators_found += found
+                    self.log.debug("На листе %s найдено регуляторов: %d", sheet_name, found)
+                else:
+                    self.log.info("Лист %s: обнаружен формат «несколько регуляторов на лист»", sheet_name)
+                    found = self.search_several_controller_table_algorithm(
+                        inlet_pressure, output_pressure, traffic_capacity, sheet
+                    )
+                    regulators_found += found
+                    self.log.debug("На листе %s найдено регуляторов: %d", sheet_name, found)
+
+            except Exception as e:
+                self.log.error(
+                    "Ошибка при обработке листа %s: %s",
+                    sheet_name, str(e), exc_info=True
+                )
+                continue  # Пропускаем лист при ошибке
+
+        self.log.info(
+            "Анализ файла %s завершён. Найдено подходящих регуляторов: %d",
+            workbook, regulators_found
+        )
         return regulators_found
 
     def replacement_button_pressed(self) -> None:
@@ -968,34 +1036,38 @@ class SelRegulator:
         """
         regulators_found = 0
         filename_log = False
+        self.log.info("Начинаем подбор регулятора")
         print("Зашли в функцию")
         listbox_data = self.drop_area.get_file_paths()
-        print("Получили файл")
+        self.log.info("Получили список файлов из drop_area: %s", listbox_data)
         self.processed_urls = {}
 
+        print(f"{listbox_data=}")
         self.__create_path_folder_for_save()
-        print("Создали директорию по созданию отчета")
+        self.log.info("Создали директорию для сохранения отчётов")
 
+        # Фильтрация Excel-файлов
         for index in range(len(listbox_data)):
+            print(f"{listbox_data[index]=}")
             if os.path.splitext(listbox_data[index])[1] == '.xlsx':
                 self.processed_urls[listbox_data[index]] = 0
-        print("Анализ файла первичный")
+        self.log.info("Отфильтрованы Excel-файлы: %s", list(self.processed_urls.keys()))
 
         if len(self.processed_urls) == 0:
             self.show_error_message("Добавьте файлы xlsx")
+            self.log.warning("Нет Excel-файлов для обработки")
             return
-        print("На случай недобавленых файлов")
         
         if not self.is_int(self.ui.max_lebel_loading_range.text()) or not self.is_int(self.ui.min_lebel_loading_range.text()):
             self.show_error_message("Некорректный диапазон процента загрузки")
+            self.log.error("Некорректный диапазон процента загрузки: max=%s, min=%s",
+                              self.ui.max_lebel_loading_range.text(),
+                              self.ui.min_lebel_loading_range.text())
             return
-
-        print("Некорректный диапазон процента загрузки")
 
         #Очищаем виджет с результатами сканирования в самой программе
         self.__clear_widget_res_in_app()
-
-        print("Очистили виджет результатов")
+        self.log.info("Виджет результатов очищен")
 
         for path_file, _ in self.processed_urls.items():
             try:
@@ -1005,49 +1077,55 @@ class SelRegulator:
                         PIn = self.get_pressure("Input")
                         POt = self.get_pressure("Output")
                         bandwidth = self.get_bandwidth()
-                        print(PIn,POt,bandwidth)
-                    except:
+                        self.log.info("Виджет результатов очищен")
+                    except Exception as e:
                         self.show_error_message("Введите корректные значения для поиска регулятора")
+                        self.log.error("Ошибка получения входных параметров: %s", str(e))
                         return 
 
                     self.__save_patch_in_conf(path_file)
-                    print("Начали поиск")
-                    #self.show_info_message(str("Поиск подходящего регулятора запущен"))
+                    self.log.info("Сохранён путь к файлу в конфиг: %s", path_file)
+
+                    self.show_info_message(str("Поиск подходящего регулятора запущен"))
                     self.status_text = "В работе"
                     self.update_status_worck("В работе.")
-                    print("Проверка входных условий")
-                    if PIn != "" and POt!="" and bandwidth!="":
+                    self.log.info("Статус установлен: 'В работе'")
+
+                    if PIn != "" and POt != "" and bandwidth != "":
 
                         ##Вот тут ошибка
                         self.__saved_conf_search()
-                        ###
+                        # ###
 
                         #Открываем файл экселя
                         workbook = openpyxl.load_workbook(os.path.normpath(path_file))
-                        print("Открыли файл екселя")
+                        self.log.info("Файл Excel открыт: %s", path_file)
+
                         #Если не был создан файл логов, создаём его
-                        if not filename_log:
-                            filename_log = self.__res_file_name()
-                            self.logger = FileWriter(filename_log)
-                            self.logger.open_file()
+                        # if not filename_log:
+                        #     filename_log = self.__res_file_name()
+                        #     self.logger = FileWriter(filename_log)
+                        #     self.log.info("Создаем файл результатов подбора")
+                        #     self.logger.open_file()
+                        #
+                        # #Пишем в файл лога стартовые данные поиска
+                        # self.start_initial_log()
 
-                        #Пишем в файл лога стартовые данные поиска
-                        self.start_initial_log()
-                        print("Записали в файл лога стартовые данные поиска")
-                        #Запуск функции анализа
-
+                        #Запуск функции анализ
+                        self.log.info("Запустился процесс подбора")
                         regulators_found += self.conduct_analysis(workbook, 
                                                                 PIn,
                                                                 POt, 
                                                                 bandwidth)
-                        print("Проверка найнедых количества регуляторов")
+                        print(f"{regulators_found=}")
                         if regulators_found == 0:
-                            self.__write_log_wrapper("Точного совпадения не найдено")
-                            self.__write_log_wrapper("Попытка найти регулятор с близкими параметрами.")
+                            # self.__write_log_wrapper("Точного совпадения не найдено")
+                            self.log.warning("Точного совпадения не найдено")
+                            # self.__write_log_wrapper("Попытка найти регулятор с близкими параметрами.")
 
                             #Находим ближайшие допустимые значения
-                            #finding_real_value = FoundCorValue(workbook,PIn,POt)
-                            #PIn,POt = finding_real_value()
+                            finding_real_value = FoundCorValue(workbook,PIn,POt)
+                            PIn,POt = finding_real_value()
 
                             regulators_found += self.conduct_analysis(workbook, 
                                                                 PIn,
@@ -1055,28 +1133,30 @@ class SelRegulator:
                                                                 bandwidth)
                                 
 
-                        if regulators_found == 0:
-                            self.__write_log_wrapper("Регуляторы с необходимыми параметрами не найдены.")
-                        else:
-                            self.__write_log_wrapper("======================")
-                            self.__write_log_wrapper("Выполнен поиск и найдены регуляторы по входному: {0} и выходному {1} давлению.".format(PIn,POt))
-                            self.__write_log_wrapper("")
-                            self.write_log_found_reg()
-
-                        #self.show_info_message("В файле {0} исправлено: {1} некорректных записей с кириллицей.".format(worck_patch,str(number_change),))
-                        self.__write_log_wrapper("!-!-!-!-!-!-!-!-!-!-!-!-!-!-!-!-!-!-!-!-!-!-!-!-!-")
-                        self.__write_log_wrapper("В файле {0} найдено {1} подходящих регуляторов.".format(path_file,len(self.list_in_range_value)))
-                        self.__write_log_wrapper("!-!-!-!-!-!-!-!-!-!-!-!-!-!-!-!-!-!-!-!-!-!-!--!")
-                        
-                        self.__clear_data_found_device()
+                        # if regulators_found == 0:
+                        #     self.__write_log_wrapper("Регуляторы с необходимыми параметрами не найдены.")
+                        # else:
+                        #     print("Ok")
+                        #     self.__write_log_wrapper("======================")
+                        #     self.__write_log_wrapper("Выполнен поиск и найдены регуляторы по входному: {0} и выходному {1} давлению.".format(PIn,POt))
+                        #     self.__write_log_wrapper("")
+                        #     self.write_log_found_reg()
+                        #
+                        # # self.show_info_message("В файле {0} исправлено: {1} некорректных записей с кириллицей.".format(worck_patch,str(number_change),))
+                        # self.__write_log_wrapper("!-!-!-!-!-!-!-!-!-!-!-!-!-!-!-!-!-!-!-!-!-!-!-!-!-")
+                        # self.__write_log_wrapper("В файле {0} найдено {1} подходящих регуляторов.".format(path_file,len(self.list_in_range_value)))
+                        # self.__write_log_wrapper("!-!-!-!-!-!-!-!-!-!-!-!-!-!-!-!-!-!-!-!-!-!-!--!")
+                        # #
+                        # self.__clear_data_found_device()
                     else:
                         self.show_error_message("Введите все входные данные!")
             except:
                 self.show_error_message(f"Критическая ошибка анализай файла - {path_file}")
+                self.log.error(f"Критическая ошибка анализай файла - {path_file}")
 
 
         # Закрытие логгера
-        self.logger.close_file()
+        # self.logger.close_file()
 
         self.update_status_worck("Ожидание работы")
         # Открытие файла в который записаны данные

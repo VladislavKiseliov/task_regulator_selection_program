@@ -2,6 +2,8 @@ from src.index import *
 import src.utils.MathMethod as MathMethod
 import logging
 from src.utils.CallbackRegister import CallbackRegistry
+from src.utils.ExelMethod import ExelMethod
+
 
 class Controller:
     """
@@ -14,7 +16,7 @@ class Controller:
     - обработку ошибок и передачу сообщений в интерфейс.
     """
 
-    def __init__(self, sel_ragulator,callback: CallbackRegistry) -> None:
+    def __init__(self, sel_ragulator,callback: CallbackRegistry,excel:ExelMethod) -> None:
         """
         Инициализирует контроллер.
 
@@ -34,6 +36,7 @@ class Controller:
         self.logger.info("Главный контроллер запущен")
         self.callback = callback
         self._register_callbacks()
+        self.excel = excel
 
     def _register_callbacks(self):
         """Register all application callbacks with the callback registry."""
@@ -309,6 +312,147 @@ class Controller:
             msg = f"Ошибка при расчёте скорости для {io_type}: {str(e)}"
             self.logger.exception(msg)
             self.sel_ragulator.show_error(msg)
+
+
+    def __validate_input_parameters(self)-> tuple[float, float, float]:
+        """
+            Валидация входных данных для дальнейшего использования
+            Надо дописать исключения в методах получения данных с гуи
+        """
+        try:
+            PIn = self.get_pressure("Input")
+            POt = self.get_pressure("Output")
+            bandwidth = self.get_bandwidth()
+            return
+        except Exception as e:
+            self.show_error_message("Введите корректные значения для поиска регулятора")
+            self.log.error("Ошибка получения входных параметров: %s", str(e))
+            return PIn,POt,bandwidth
+
+
+
+    def replacement_button_pressed(self) -> None:
+        """
+        Главный метод подбора регулятора.
+        """
+        self.log.info("Начинаем подбор регулятора")
+
+        # 1. Получение и логирование путей
+        file_paths = self.drop_area.get_file_paths()
+        self.log.info("Получили список файлов из drop_area: %s", file_paths)
+
+        # 2. Создание директории для отчётов
+        self.__create_path_folder_for_save()
+        self.log.info("Создали директорию для сохранения отчётов")
+
+        # 3. Фильтрация Excel-файлов
+        excel_files = self.excel.filter_excel_files(file_paths)  # исправлена опечатка в имени
+        self.log.info("Отфильтрованы Excel-файлы: %s", excel_files)
+
+        if not excel_files:
+            self.show_error_message("Добавьте файлы с расширением .xlsx")
+            self.log.warning("Нет Excel-файлов для обработки")
+            return
+
+        # 4. Валидация ВСЕХ входных параметров (общих для всех файлов)
+        try:
+            min_load, max_load = self.sel_ragulator.get_loading_range()
+            PIn, POt, bandwidth = self.__validate_input_parameters()
+        except ValueError as e:
+            self.show_error_message(str(e))
+            self.log.error("Ошибка валидации входных данных: %s", e)
+            return
+
+        # 5. Подготовка UI
+        self.__clear_widget_res_in_app()
+        self.update_status_worck("В работе")
+        self.log.info("Виджет результатов очищен, статус: 'В работе'")
+
+        # 6. Сохранение конфигурации поиска (если нужно)
+        self.__saved_conf_search()
+
+        # 7. Обработка каждого файла
+        total_regulators_found = 0
+
+        for path_file in self.filtered_paths:
+            if not path_file.strip():  # защита от пустых строк
+                continue
+
+            try:
+                self.__save_patch_in_conf(path_file)
+                self.log.info("Сохранён путь к файлу в конфиг: %s", path_file)
+
+                self.show_info_message("Поиск подходящего регулятора запущен")
+                self.log.info("Открываем Excel-файл: %s", path_file)
+
+                workbook = openpyxl.load_workbook(os.path.normpath(path_file), read_only=True, data_only=True)
+
+                # --- Анализ одного файла ---
+                found = self.conduct_analysis(workbook, PIn, POt, bandwidth)
+
+                if found == 0:
+                    self.log.warning("Точное совпадение не найдено в файле %s. Ищем ближайшие значения.", path_file)
+                    finder = FoundCorValue(workbook, PIn, POt)
+                    PIn_adj, POt_adj = finder()
+                    found = self.conduct_analysis(workbook, PIn_adj, POt_adj, bandwidth)
+
+                total_regulators_found += found
+                self.log.info("В файле %s найдено %d регуляторов", path_file, found)
+
+            except Exception as e:
+                error_msg = f"Ошибка при обработке файла: {os.path.basename(path_file)}"
+                self.show_error_message(error_msg)
+                # self.log.exception("Критическая ошибка при анализе файла %s: %s", path_file,e)
+
+        # 8. Финализация
+        self.update_status_worck("Ожидание работы")
+        self.log.info("Подбор завершён. Всего найдено регуляторов: %d", total_regulators_found)
+
+        # Опционально: показать итоговое сообщение
+        if total_regulators_found == 0:
+            self.show_info_message("Подходящие регуляторы не найдены.")
+        else:
+            self.show_info_message(f"Найдено {total_regulators_found} подходящих регуляторов.")
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
     def select_product_type(self) -> None:
         """
