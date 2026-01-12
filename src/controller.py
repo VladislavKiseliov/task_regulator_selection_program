@@ -1,3 +1,5 @@
+from cx_Freeze.darwintools import printMachOFiles
+
 from src.index import *
 import src.utils.MathMethod as MathMethod
 import logging
@@ -42,6 +44,7 @@ class Controller:
         """Register all application callbacks with the callback registry."""
         print("Зарегестрировали функцию")
         self.callback.register("make_calculation", self.make_calculation)
+        self.callback.register("replacement_button_pressed", self.replacement_button_pressed)
 
     def make_calculation(self) -> None:
         """
@@ -313,77 +316,76 @@ class Controller:
             self.logger.exception(msg)
             self.sel_ragulator.show_error(msg)
 
-
     def __validate_input_parameters(self)-> tuple[float, float, float]:
         """
             Валидация входных данных для дальнейшего использования
             Надо дописать исключения в методах получения данных с гуи
         """
         try:
-            PIn = self.get_pressure("Input")
-            POt = self.get_pressure("Output")
-            bandwidth = self.get_bandwidth()
-            return
-        except Exception as e:
-            self.show_error_message("Введите корректные значения для поиска регулятора")
-            self.log.error("Ошибка получения входных параметров: %s", str(e))
+            PIn = self.sel_ragulator.get_pressure("Input")
+            POt = self.sel_ragulator.get_pressure("Output")
+            bandwidth = self.sel_ragulator.get_bandwidth()
             return PIn,POt,bandwidth
 
-
+        except Exception as e:
+            self.sel_ragulator.show_error_message("Введите корректные значения для поиска регулятора")
+            self.logger.error("Ошибка получения входных параметров: %s", str(e))
+            return
 
     def replacement_button_pressed(self) -> None:
         """
         Главный метод подбора регулятора.
         """
-        self.log.info("Начинаем подбор регулятора")
+        self.logger.info("Начинаем подбор регулятора")
 
         # 1. Получение и логирование путей
-        file_paths = self.drop_area.get_file_paths()
-        self.log.info("Получили список файлов из drop_area: %s", file_paths)
-
-        # 2. Создание директории для отчётов
-        self.__create_path_folder_for_save()
-        self.log.info("Создали директорию для сохранения отчётов")
+        file_paths = self.sel_ragulator.drop_area.get_file_paths()
+        self.logger.info("Получили список файлов из drop_area: %s", file_paths)
 
         # 3. Фильтрация Excel-файлов
-        excel_files = self.excel.filter_excel_files(file_paths)  # исправлена опечатка в имени
-        self.log.info("Отфильтрованы Excel-файлы: %s", excel_files)
+        excel_files = self.excel.filter_excel_file(file_paths)  # исправлена опечатка в имени
+        self.logger.info("Отфильтрованы Excel-файлы: %s", excel_files)
 
         if not excel_files:
-            self.show_error_message("Добавьте файлы с расширением .xlsx")
-            self.log.warning("Нет Excel-файлов для обработки")
+            self.sel_ragulator.show_error_message("Добавьте файлы с расширением .xlsx")
+            self.logger.warning("Нет Excel-файлов для обработки")
             return
 
         # 4. Валидация ВСЕХ входных параметров (общих для всех файлов)
         try:
-            min_load, max_load = self.sel_ragulator.get_loading_range()
+            min_load, max_load = self.sel_ragulator.get_loading_range() # Получаем диапазон загрузки
+            print(min_load, max_load)
             PIn, POt, bandwidth = self.__validate_input_parameters()
+            print(PIn,POt,bandwidth)
+            self.logger.info("Входные данные получены")
+
         except ValueError as e:
-            self.show_error_message(str(e))
-            self.log.error("Ошибка валидации входных данных: %s", e)
+            self.sel_ragulator.show_error_message(str(e))
+            self.logger.error("Ошибка валидации входных данных: %s", e)
             return
 
         # 5. Подготовка UI
-        self.__clear_widget_res_in_app()
-        self.update_status_worck("В работе")
-        self.log.info("Виджет результатов очищен, статус: 'В работе'")
+        # self.__clear_widget_res_in_app()
+        # self.update_status_worck("В работе")
+        # self.logger.info("Виджет результатов очищен, статус: 'В работе'")
 
         # 6. Сохранение конфигурации поиска (если нужно)
-        self.__saved_conf_search()
+        # self.__saved_conf_search()
 
         # 7. Обработка каждого файла
+        print("Шаг 7 ")
         total_regulators_found = 0
 
-        for path_file in self.filtered_paths:
+        for path_file in excel_files:
             if not path_file.strip():  # защита от пустых строк
                 continue
 
             try:
-                self.__save_patch_in_conf(path_file)
-                self.log.info("Сохранён путь к файлу в конфиг: %s", path_file)
+                # self.__save_patch_in_conf(path_file)
+                # self.logger.info("Сохранён путь к файлу в конфиг: %s", path_file)
 
-                self.show_info_message("Поиск подходящего регулятора запущен")
-                self.log.info("Открываем Excel-файл: %s", path_file)
+                self.sel_ragulator.show_info_message("Поиск подходящего регулятора запущен")
+                self.logger.info("Открываем Excel-файл: %s", path_file)
 
                 workbook = openpyxl.load_workbook(os.path.normpath(path_file), read_only=True, data_only=True)
 
@@ -391,7 +393,7 @@ class Controller:
                 found = self.conduct_analysis(workbook, PIn, POt, bandwidth)
 
                 if found == 0:
-                    self.log.warning("Точное совпадение не найдено в файле %s. Ищем ближайшие значения.", path_file)
+                    self.logger.warning("Точное совпадение не найдено в файле %s. Ищем ближайшие значения.", path_file)
                     finder = FoundCorValue(workbook, PIn, POt)
                     PIn_adj, POt_adj = finder()
                     found = self.conduct_analysis(workbook, PIn_adj, POt_adj, bandwidth)
@@ -401,12 +403,12 @@ class Controller:
 
             except Exception as e:
                 error_msg = f"Ошибка при обработке файла: {os.path.basename(path_file)}"
-                self.show_error_message(error_msg)
+                self.sel_ragulator.show_error_message(error_msg)
                 # self.log.exception("Критическая ошибка при анализе файла %s: %s", path_file,e)
 
         # 8. Финализация
-        self.update_status_worck("Ожидание работы")
-        self.log.info("Подбор завершён. Всего найдено регуляторов: %d", total_regulators_found)
+        self.sel_ragulator.update_status_worck("Ожидание работы")
+        self.logger.info("Подбор завершён. Всего найдено регуляторов: %d", total_regulators_found)
 
         # Опционально: показать итоговое сообщение
         if total_regulators_found == 0:
@@ -414,10 +416,51 @@ class Controller:
         else:
             self.show_info_message(f"Найдено {total_regulators_found} подходящих регуляторов.")
 
+    def conduct_analysis(self, workbook: str,
+                         inlet_pressure: float,
+                         output_pressure: float,
+                         traffic_capacity: float) -> int:
+        """Функция conduct_analysis, распарсивает экселевский файл
+        и ищет подходящие ячейки по входным данным.
+        Возвращает колличество найденных девайсов в файле."""
+        self.logger.info("Начинаем анализ Excel-файла: %s", workbook)
+        self.logger.debug("Доступные листы в книге: %s", workbook.sheetnames)
 
+        regulators_found = 0
+        print(f"{workbook.sheetnames=}")
 
+        for sheet_name in workbook.sheetnames:
+            sheet = workbook[sheet_name]
+            self.logger.debug("Обрабатываем лист: %s", sheet_name)
 
+            try:
+                # Проверяем признак типа таблицы в ячейке C1
+                c1_value = sheet["C1"].value
+                self.logger.debug("Значение в C1 на листе %s: %r", sheet_name, c1_value)
 
+                if c1_value is None or c1_value == "":
+                    self.logger.info("Лист %s: обнаружен формат «один регулятор на лист»", sheet_name)
+                    found = self.excel.search_one_controller_table_algorithm(inlet_pressure, output_pressure, traffic_capacity, sheet)
+                    regulators_found += found
+                    self.logger.debug("На листе %s найдено регуляторов: %d", sheet_name, found)
+                else:
+                    self.logger.info("Лист %s: обнаружен формат «несколько регуляторов на лист»", sheet_name)
+                    found = self.excel.search_several_controller_table_algorithm(inlet_pressure, output_pressure, traffic_capacity, sheet)
+                    regulators_found += found
+                    self.logger.debug("На листе %s найдено регуляторов: %d", sheet_name, found)
+
+            except Exception as e:
+                self.log.error(
+                    "Ошибка при обработке листа %s: %s",
+                    sheet_name, str(e), exc_info=True
+                )
+                continue  # Пропускаем лист при ошибке
+
+        self.log.info(
+            "Анализ файла %s завершён. Найдено подходящих регуляторов: %d",
+            workbook, regulators_found
+        )
+        return regulators_found
 
 
 

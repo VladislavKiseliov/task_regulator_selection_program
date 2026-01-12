@@ -2,19 +2,10 @@ from typing import Callable, Union, Dict, Any
 import src.utils.MathMethod as MathMethod
 from imports import *
 from pathlib import Path
-from contextlib import contextmanager
 import logging
+import src.utils.utils as utils
 
 from src.utils.CallbackRegister import CallbackRegistry
-
-
-@contextmanager
-def block_signals(widget):
-    widget.blockSignals(True)
-    try:
-        yield widget
-    finally:
-        widget.blockSignals(False)
 
 
 
@@ -49,7 +40,7 @@ class SelRegulator:
         self.status_animation = itertools.cycle(["В работе.", "В работе..", "В работе..."])
 
         self.__conf_file_loader()
-        self.__create_path_folder_for_save()
+        utils.create_path_folder_for_save()
 
         # self.app = QtWidgets.QApplication(sys.argv)
         
@@ -90,7 +81,7 @@ class SelRegulator:
         и методами класса SelRegulator.
         """
         # Кнопка "Подобрать регулятор" - вызывает метод replacement_button_pressed
-        self.ui.pushButton_selected_regulator.clicked.connect(self.replacement_button_pressed)
+        self.ui.pushButton_selected_regulator.clicked.connect(lambda: self.callback.trigger("replacement_button_pressed"))
 
         # Кнопка "Открыть файл" - вызывает метод __open_file_dialog
         self.ui.pushButton_load_file.clicked.connect(self.__open_file_dialog)
@@ -272,7 +263,7 @@ class SelRegulator:
         widget_name = f"lineEdit_diameter_of_gas_pipeline_{ioType}"
         try:
             widget = getattr(self.ui, widget_name)
-            with block_signals(widget):
+            with utils.block_signals(widget):
                 widget.setText(str(diametr))
 
         except Exception as e:
@@ -332,7 +323,7 @@ class SelRegulator:
         widget_name = f"lineEdit_gas_speed_{ioType}"
         try:
             widget = getattr(self.ui, widget_name)
-            with block_signals(widget):
+            with utils.block_signals(widget):
                 widget.setText(f"{gas_speed:.1f}")
 
         except Exception as e:
@@ -438,25 +429,10 @@ class SelRegulator:
 
         return min_val, max_val
 
-
     def __drop_area_create(self) -> None:
         # Создаем виджет DropArea и добавляем его в scrollArea_2
         self.drop_area = DropArea();
         self.ui.scrollArea_2.setWidget(self.drop_area)
-
-    def __create_path_folder_for_save(self) -> None:
-        """Создаём папку для сохранения файлов логов если её нет.
-        получаем путь к этой папке."""
-        # Получение текущей директории
-        self.current_dir = os.getcwd()
-
-        # Сборка пути к папке
-        self.folder_save_name = "записи подборов регулятора"
-        self.folder_path = os.path.join(self.current_dir, self.folder_save_name)
-
-        # Проверка существования папки и создание, если не существует
-        if not os.path.exists(self.folder_path):
-            os.makedirs(self.folder_path)
 
     def __conf_file_loader(self) -> None:
         """Загружаем json с конфигом, в котором находятся пути сохраённных xmlx файлов"""
@@ -519,17 +495,6 @@ class SelRegulator:
         except:
             pass
 
-    def __split_and_insert_newline(self, text) -> None:
-        """Функция для разделения строчки на двое если одна длинее 5 слов"""
-        words = text.split()  # Разделение строки на список слов
-        result = text
-        if len(words) > 5:
-            half_length = len(words) // 2
-            first_half = ' '.join(words[:half_length])  # Объединение слов до середины
-            second_half = ' '.join(words[half_length:])  # Объединение слов после середины
-            result = f"{first_half}\n{second_half}"
-        return result
-
     def __clear_widget_res_in_app(self) -> None:
         """Функция для очистки результата работы программы в виджете QPlainTextEdit"""
         self.ui.plainTextEdit.setReadOnly(False)  # Установка режима редактирования
@@ -539,7 +504,7 @@ class SelRegulator:
     def __write_log_wrapper(self, mess:str) ->None:
         """Функция для добавления данных в виджет логирования в программе"""
         current_text = self.ui.plainTextEdit.toPlainText()
-        new_text = current_text + "\n" + self.__split_and_insert_newline(mess)
+        new_text = current_text + "\n" + utils.split_and_insert_newline(mess)
         self.ui.plainTextEdit.setPlainText(new_text)
 
         self.logger.write_log(mess)
@@ -631,16 +596,6 @@ class SelRegulator:
         self.status_text = status_text
         self.status_work_cycle()
 
-    def is_int(self, value) -> bool:
-        """Функция is_int, принимает значение
-        и если это число возвращает True,
-        иначе False"""
-        try:
-            int(value)
-            return True
-        except ValueError:
-            return False
-
     def possible_copy(self, path_file:str, worck_patch:str) -> bool:
         """
         Проверяет возможность копирования файла из одного пути в другой. 
@@ -704,7 +659,7 @@ class SelRegulator:
         об устройствах"""
         print(f"{saddle=}")
         for i in saddle.split():
-            if self.is_int(i):
+            if utils.is_int(i):
                 saddle=i
         
         #name_devace+="/"+saddle
@@ -780,388 +735,6 @@ class SelRegulator:
 
         self.saved_conf_minimum_load = int(self.ui.min_lebel_loading_range.text())
         self.saved_conf_maximum_load =  int(self.ui.max_lebel_loading_range.text())
-    
-    def search_several_controller_table_algorithm(self,
-                                            inlet_pressure:float, 
-                                            output_pressure:float, 
-                                            traffic_capacity:float,
-                                            sheet) -> int:
-        """Функция search_several_controller_table_algorithm, принимает
-        данные поиска и лист с таблицей формата: несколько устройств
-        на одном листе. И добавляет девайс в найденные если 
-        его данные таблицы соответствуют найденным, и возвращает
-        1 если устройство соответствует"""
-        # Put your sheet in the loader
-        regulators_found = 0
-        i_row = 0
-
-        for row in sheet.iter_rows(values_only=True):
-            if i_row == 0:
-                saddle = row[0]
-                print(f"saddle: {saddle=}")
-            
-            for i_cell in range(len(row)):
-                if i_row == 2 and i_cell!=0:
-
-                    #Ищим подходящие выходные давления, как по диапазону - так и по единичным значениям
-                    mb_diap_Paut = str(row[i_cell]).replace("\xa0", '').replace(" ", '').replace(",", '.').split("-")
-                    
-                    if len(mb_diap_Paut) == 2:
-                        #Если ячейка выходного давления является диапазоном
-                        name_devace = sheet[get_excel_column(i_cell+1)+"1"].value
-                        if float(mb_diap_Paut[0]) <= float(output_pressure) <= float(mb_diap_Paut[1]):
-                            row_scr_i=0
-                            for row_scr in sheet.iter_rows(values_only=True):
-                                if row_scr_i > 2:
-                                    mb_diap_Pain = str(row_scr[0]).replace("\xa0", '').replace(" ", '').replace(",", '.').split("-")
-
-                                    #Если ячейка входного давления является диапазоном
-                                    if len(mb_diap_Pain) == 2: 
-                                        if  float(mb_diap_Pain[0]) <= float(inlet_pressure) <= float(mb_diap_Pain[1]):
-
-                                            bandwidth = int(traffic_capacity)
-                                            #Проверяем можем ли мы перевести значение пропускной способности в число
-                                            if self.is_int(row_scr[i_cell]):
-
-                                                #Проверяем, найденная пропускная способность больше ли необходимой, и является ли регулятор для сжиженного газа если необходимо
-                                                if int(row_scr[i_cell]) >= bandwidth:
-                                                    regulators_found+=1
-                                                    self.__logging_found_device(name_devace, saddle, row_scr[i_cell], bandwidth, traffic_capacity)
-
-                                    
-                                    #Если ячейка входного давления НЕ является диапазоном
-                                    else:
-                                        if  float(mb_diap_Pain[0]) == float(inlet_pressure):
-                                            bandwidth = int(traffic_capacity)
-                                            #Проверяем можем ли мы перевести значение пропускной способности в число
-                                            if self.is_int(row_scr[i_cell]):
-                                                if int(row_scr[i_cell]) >= bandwidth:
-                                                    regulators_found+=1
-                                                    self.__logging_found_device(name_devace, saddle, row_scr[i_cell], bandwidth, traffic_capacity)
-
-                                row_scr_i+=1
-
-                    #Если ячейка выходного давления НЕ является диапазоном и существует
-                        
-                    elif mb_diap_Paut[0] != "None":
-                        if float(output_pressure) == float(mb_diap_Paut[0]):
-                            name_devace = sheet[get_excel_column(i_cell+1)+"1"].valu
-                            row_scr_i=0
-                            for row_scr in sheet.iter_rows(values_only=True):
-                                if row_scr_i > 2:
-                                    mb_diap_Pain = str(row_scr[0]).replace("\xa0", '').replace(" ", '').replace(",", '.').split("-")
-                                    #Если ячейка входного давления является диапазоном
-                                    if len(mb_diap_Pain) == 2: 
-                                        if  float(mb_diap_Pain[0]) <= float(inlet_pressure) <= float(mb_diap_Pain[1]):
-                                            bandwidth = int(self.traffic_capacity)+(int(self.traffic_capacity)/100)
-                                            #Проверяем можем ли мы перевести значение пропускной способности в число
-                                            if self.is_int(row_scr[i_cell]):
-                                                if int(row_scr[i_cell]) >= bandwidth :
-                                                    regulators_found+=1
-                                                    self.__logging_found_device(name_devace, saddle, row_scr[i_cell], bandwidth, traffic_capacity)
-                                    
-                                    #Если ячейка входного давления НЕ является диапазоном
-                                    else:
-                                        if  float(mb_diap_Pain[0]) == float(inlet_pressure):
-                                            bandwidth = int(traffic_capacity)
-                                            #Проверяем можем ли мы перевести значение пропускной способности в число
-                                            if self.is_int(row_scr[i_cell]):          
-                                                #Если это значение больше или равно необходимого
-                                                if int(row_scr[i_cell]) >= bandwidth :
-                                                    regulators_found+=1
-                                                    self.__logging_found_device(name_devace, saddle, row_scr[i_cell], bandwidth, traffic_capacity)
-                                    
-                                row_scr_i+=1
-            i_row += 1
-
-        return regulators_found
-
-    def search_one_controller_table_algorithm(self,
-                                            inlet_pressure:float, 
-                                            output_pressure:float, 
-                                            traffic_capacity:float,
-                                            sheet) -> int:
-        """Функция search_one_controller_table_algorithm, принимает
-        данные поиска и лист с таблицей формата: одно устройство
-        на одном листе. И добавляет девайс в найденные если 
-        его данные таблицы соответствуют найденным, и возвращает
-        1 если устройство соответствует"""
-        # Put your sheet in the loader
-        regulators_found = 0
-        i_row = 0
-        self.log.info(f"Обрабатываем лист {sheet.title=}")
-        for row in sheet.iter_rows(values_only=True):
-            if i_row == 0:
-                name_devace = row[0]
-                if name_devace not in self.data:
-                    self.data[name_devace] = {}
-
-                saddle = row[1]
-                self.data[name_devace][saddle]={}
-
-            if i_row == 1:
-                unit_Pin = row[0]
-                unit_Out = row[1]
-
-                self.data[name_devace][saddle]['unit_Pin'] = unit_Pin
-                self.data[name_devace][saddle]['unit_Out'] = unit_Out
-                self.data[name_devace][saddle]['data_P'] = {}
-
-            for i_cell in range(len(row)):
-                if i_row == 2 and i_cell!=0:
-                    #Ищим подходящие выходные давления, как по диапазону - так и по единичным значениям
-                    mb_diap_Paut = str(row[i_cell]).replace("\xa0", '').replace(" ", '').replace(",", '.').split("-")
-                    if len(mb_diap_Paut) == 2:
-                        #Если ячейка выходного давления является диапазоном
-                        if float(mb_diap_Paut[0]) <= float(output_pressure) <= float(mb_diap_Paut[1]):
-                            row_scr_i=0
-                            for row_scr in sheet.iter_rows(values_only=True):
-                                if row_scr_i > 2:
-                                    mb_diap_Pain = str(row_scr[0]).replace("\xa0", '').replace(" ", '').replace(",", '.').split("-")
-
-                                    #Если ячейка входного давления является диапазоном
-                                    if len(mb_diap_Pain) == 2: 
-                                        if  float(mb_diap_Pain[0]) <= float(inlet_pressure) <= float(mb_diap_Pain[1]):
-
-                                            bandwidth = int(traffic_capacity)
-                                            #Проверяем можем ли мы перевести значение пропускной способности в число
-                                            if self.is_int(row_scr[i_cell]):
-                                                #Проверяем, найденная пропускная способность больше ли необходимой, и является ли регулятор для сжиженного газа если необходимо
-                                                if int(row_scr[i_cell]) >= bandwidth and (("Ж" in name_devace or "ж" in name_devace) == self.saved_conf_Regulator_for_liquefied_gas):
-                                                    regulators_found+=1
-
-                                                    
-                                                    self.__logging_found_device(name_devace, saddle, row_scr[i_cell], bandwidth, traffic_capacity)
-
-                                    
-                                    #Если ячейка входного давления НЕ является диапазоном
-                                    else:
-                                        if  float(mb_diap_Pain[0]) == float(inlet_pressure):
-                                            bandwidth = int(traffic_capacity)
-                                            #Проверяем можем ли мы перевести значение пропускной способности в число
-                                            if self.is_int(row_scr[i_cell]):
-                                                if int(row_scr[i_cell]) >= bandwidth and (("Ж" in name_devace or "ж" in name_devace) == self.saved_conf_Regulator_for_liquefied_gas):
-                                                    regulators_found+=1
-                                                    self.__logging_found_device(name_devace, saddle, row_scr[i_cell], bandwidth, traffic_capacity)
-
-                                row_scr_i+=1
-
-                    #Если ячейка выходного давления НЕ является диапазоном
-                    elif mb_diap_Paut[0] != "None":
-                        if float(output_pressure) == float(mb_diap_Paut[0]):
-                            row_scr_i=0
-                            for row_scr in sheet.iter_rows(values_only=True):
-                                if row_scr_i > 2:
-                                    mb_diap_Pain = str(row_scr[0]).replace("\xa0", '').replace(" ", '').replace(",", '.').split("-")
-
-                                    #Если ячейка входного давления является диапазоном
-                                    if len(mb_diap_Pain) == 2: 
-                                        if  float(mb_diap_Pain[0]) <= float(inlet_pressure) <= float(mb_diap_Pain[1]):
-                                            bandwidth = int(self.traffic_capacity)+(int(self.traffic_capacity)/100)
-                                            #Проверяем можем ли мы перевести значение пропускной способности в число
-                                            if self.is_int(row_scr[i_cell]):
-                                                if int(row_scr[i_cell]) >= bandwidth and (("Ж" in name_devace or "ж" in name_devace) == self.saved_conf_Regulator_for_liquefied_gas):
-                                                    regulators_found+=1
-                                                    self.__logging_found_device(name_devace, saddle, row_scr[i_cell], bandwidth, traffic_capacity)
-                                    
-                                    #Если ячейка входного давления НЕ является диапазоном
-                                    else:
-                                        if  float(mb_diap_Pain[0]) == float(inlet_pressure):
-                                            bandwidth = int(traffic_capacity)
-                                            #Проверяем можем ли мы перевести значение пропускной способности в число
-                                            if self.is_int(row_scr[i_cell]):
-                                                #Если это значение больше или равно необходимого
-                                                if int(row_scr[i_cell]) >= bandwidth and (("Ж" in name_devace or "ж" in name_devace) == self.saved_conf_Regulator_for_liquefied_gas):
-                                                    regulators_found+=1
-                                                    self.__logging_found_device(name_devace, saddle, row_scr[i_cell], bandwidth, traffic_capacity)
-                                    
-                                row_scr_i+=1
-            i_row += 1
-        print(f"search one contoller table algoritm {regulators_found=}")
-        return regulators_found
-
-    def conduct_analysis(self, workbook:str,
-                         inlet_pressure:float, 
-                         output_pressure:float, 
-                         traffic_capacity:float) -> int:
-        """Функция conduct_analysis, распарсивает экселевский файл
-        и ищет подходящие ячейки по входным данным.
-        Возвращает колличество найденных девайсов в файле."""
-        self.log.info("Начинаем анализ Excel-файла: %s", workbook)
-        self.log.debug("Доступные листы в книге: %s", workbook.sheetnames)
-
-        regulators_found = 0
-        print(f"{workbook.sheetnames=}")
-
-
-        for sheet_name in workbook.sheetnames:
-            sheet = workbook[sheet_name]
-            self.log.debug("Обрабатываем лист: %s", sheet_name)
-
-            try:
-                # Проверяем признак типа таблицы в ячейке C1
-                c1_value = sheet["C1"].value
-                self.log.debug("Значение в C1 на листе %s: %r", sheet_name, c1_value)
-
-                if c1_value is None or c1_value == "":
-                    self.log.info("Лист %s: обнаружен формат «один регулятор на лист»", sheet_name)
-                    found = self.search_one_controller_table_algorithm(
-                        inlet_pressure, output_pressure, traffic_capacity, sheet
-                    )
-                    regulators_found += found
-                    self.log.debug("На листе %s найдено регуляторов: %d", sheet_name, found)
-                else:
-                    self.log.info("Лист %s: обнаружен формат «несколько регуляторов на лист»", sheet_name)
-                    found = self.search_several_controller_table_algorithm(
-                        inlet_pressure, output_pressure, traffic_capacity, sheet
-                    )
-                    regulators_found += found
-                    self.log.debug("На листе %s найдено регуляторов: %d", sheet_name, found)
-
-            except Exception as e:
-                self.log.error(
-                    "Ошибка при обработке листа %s: %s",
-                    sheet_name, str(e), exc_info=True
-                )
-                continue  # Пропускаем лист при ошибке
-
-        self.log.info(
-            "Анализ файла %s завершён. Найдено подходящих регуляторов: %d",
-            workbook, regulators_found
-        )
-        return regulators_found
-
-    def replacement_button_pressed(self) -> None:
-        """
-        """
-        regulators_found = 0
-        filename_log = False
-        self.log.info("Начинаем подбор регулятора")
-        print("Зашли в функцию")
-        listbox_data = self.drop_area.get_file_paths()
-        self.log.info("Получили список файлов из drop_area: %s", listbox_data)
-        self.processed_urls = {}
-
-        print(f"{listbox_data=}")
-        self.__create_path_folder_for_save()
-        self.log.info("Создали директорию для сохранения отчётов")
-
-        # Фильтрация Excel-файлов
-        for index in range(len(listbox_data)):
-            print(f"{listbox_data[index]=}")
-            if os.path.splitext(listbox_data[index])[1] == '.xlsx':
-                self.processed_urls[listbox_data[index]] = 0
-        self.log.info("Отфильтрованы Excel-файлы: %s", list(self.processed_urls.keys()))
-
-        if len(self.processed_urls) == 0:
-            self.show_error_message("Добавьте файлы xlsx")
-            self.log.warning("Нет Excel-файлов для обработки")
-            return
-        
-        if not self.is_int(self.ui.max_lebel_loading_range.text()) or not self.is_int(self.ui.min_lebel_loading_range.text()):
-            self.show_error_message("Некорректный диапазон процента загрузки")
-            self.log.error("Некорректный диапазон процента загрузки: max=%s, min=%s",
-                              self.ui.max_lebel_loading_range.text(),
-                              self.ui.min_lebel_loading_range.text())
-            return
-
-        #Очищаем виджет с результатами сканирования в самой программе
-        self.__clear_widget_res_in_app()
-        self.log.info("Виджет результатов очищен")
-
-        for path_file, _ in self.processed_urls.items():
-            try:
-                if path_file.replace(" ", "") != "":
-
-                    try:
-                        PIn = self.get_pressure("Input")
-                        POt = self.get_pressure("Output")
-                        bandwidth = self.get_bandwidth()
-                        self.log.info("Виджет результатов очищен")
-                    except Exception as e:
-                        self.show_error_message("Введите корректные значения для поиска регулятора")
-                        self.log.error("Ошибка получения входных параметров: %s", str(e))
-                        return 
-
-                    self.__save_patch_in_conf(path_file)
-                    self.log.info("Сохранён путь к файлу в конфиг: %s", path_file)
-
-                    self.show_info_message(str("Поиск подходящего регулятора запущен"))
-                    self.status_text = "В работе"
-                    self.update_status_worck("В работе.")
-                    self.log.info("Статус установлен: 'В работе'")
-
-                    if PIn != "" and POt != "" and bandwidth != "":
-
-                        ##Вот тут ошибка
-                        self.__saved_conf_search()
-                        # ###
-
-                        #Открываем файл экселя
-                        workbook = openpyxl.load_workbook(os.path.normpath(path_file))
-                        self.log.info("Файл Excel открыт: %s", path_file)
-
-                        #Если не был создан файл логов, создаём его
-                        # if not filename_log:
-                        #     filename_log = self.__res_file_name()
-                        #     self.logger = FileWriter(filename_log)
-                        #     self.log.info("Создаем файл результатов подбора")
-                        #     self.logger.open_file()
-                        #
-                        # #Пишем в файл лога стартовые данные поиска
-                        # self.start_initial_log()
-
-                        #Запуск функции анализ
-                        self.log.info("Запустился процесс подбора")
-                        regulators_found += self.conduct_analysis(workbook, 
-                                                                PIn,
-                                                                POt, 
-                                                                bandwidth)
-                        print(f"{regulators_found=}")
-                        if regulators_found == 0:
-                            # self.__write_log_wrapper("Точного совпадения не найдено")
-                            self.log.warning("Точного совпадения не найдено")
-                            # self.__write_log_wrapper("Попытка найти регулятор с близкими параметрами.")
-
-                            #Находим ближайшие допустимые значения
-                            finding_real_value = FoundCorValue(workbook,PIn,POt)
-                            PIn,POt = finding_real_value()
-
-                            regulators_found += self.conduct_analysis(workbook, 
-                                                                PIn,
-                                                                POt, 
-                                                                bandwidth)
-                                
-
-                        # if regulators_found == 0:
-                        #     self.__write_log_wrapper("Регуляторы с необходимыми параметрами не найдены.")
-                        # else:
-                        #     print("Ok")
-                        #     self.__write_log_wrapper("======================")
-                        #     self.__write_log_wrapper("Выполнен поиск и найдены регуляторы по входному: {0} и выходному {1} давлению.".format(PIn,POt))
-                        #     self.__write_log_wrapper("")
-                        #     self.write_log_found_reg()
-                        #
-                        # # self.show_info_message("В файле {0} исправлено: {1} некорректных записей с кириллицей.".format(worck_patch,str(number_change),))
-                        # self.__write_log_wrapper("!-!-!-!-!-!-!-!-!-!-!-!-!-!-!-!-!-!-!-!-!-!-!-!-!-")
-                        # self.__write_log_wrapper("В файле {0} найдено {1} подходящих регуляторов.".format(path_file,len(self.list_in_range_value)))
-                        # self.__write_log_wrapper("!-!-!-!-!-!-!-!-!-!-!-!-!-!-!-!-!-!-!-!-!-!-!--!")
-                        # #
-                        # self.__clear_data_found_device()
-                    else:
-                        self.show_error_message("Введите все входные данные!")
-            except:
-                self.show_error_message(f"Критическая ошибка анализай файла - {path_file}")
-                self.log.error(f"Критическая ошибка анализай файла - {path_file}")
-
-
-        # Закрытие логгера
-        # self.logger.close_file()
-
-        self.update_status_worck("Ожидание работы")
-        # Открытие файла в который записаны данные
-        #subprocess.Popen(["notepad.exe", filename_log])
-        #subprocess.Popen(f'explorer "{os.path.normpath(os.path.dirname(path_file))}"')
 
     def open_file(self):
         """Функция open_file, привязана
@@ -1230,30 +803,5 @@ class SelRegulator:
         кнопка "Удалить" для удаления выбранных файлов из списка. Статус операции 
         отображается в метке, а анимация показывает, что операция выполняется.
         """
-        # self.root = TkinterDnD.Tk()
-        # self.root.title("Программа подбора регулятора")
-        # self.root.geometry("800x710")
-        # try:
-        #     self.root.iconbitmap("icon.ico")
-        # except:
-        #     pass
-        # self.style = ttk.Style()
-        # self.style.configure("TFrame", background="lightgrey")
-        # self.style.configure("TLabel", background="lightgrey")
-        # self.style.configure("TButton",
-        #                 background="#007bff",
-        #                 foreground="black",
-        #                 relief=tk.FLAT,
-        #                 font=("Helvetica", 12),
-        #                 padding=10,
-        #                 width=20,
-        #                 borderwidth=0)
-        # self.style.map("TButton",
-        #           background=[("active", "#0056b3")],
-        #           foreground=[("active", "black")])
-        
-        #self.__core_render()
-
-        #self.root.mainloop()
 
         self.MainWindow.show()

@@ -109,6 +109,7 @@ from PyQt5.QtWidgets import QApplication
 
 from src.index import SelRegulator
 from src.controller import Controller
+from src.utils.ExelMethod import ExelMethod
 from src.utils.logger_config import setup_logger, create_log_file
 from src.utils.CallbackRegister import CallbackRegistry
 
@@ -124,7 +125,8 @@ if __name__ == "__main__":
         # 2. Инициализируем компоненты
         callback_registry = CallbackRegistry()
         sel_regulator = SelRegulator(callback_registry)
-        controller = Controller(sel_regulator, callback_registry)
+        excel = ExelMethod()
+        controller = Controller(sel_regulator, callback_registry,excel)
 
         # 3. Показываем окно
         sel_regulator.draw_window()
