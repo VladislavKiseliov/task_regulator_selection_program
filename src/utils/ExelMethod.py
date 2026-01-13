@@ -1,7 +1,10 @@
 import os
 from typing import List
 import logging
-import src.utils.utils as utils
+
+from src.MiniFunc import get_excel_column
+from src.utils import utils
+
 
 class ExelMethod:
     def __init__(self):
@@ -169,7 +172,6 @@ class ExelMethod:
         print(f"search one contoller table algoritm {regulators_found=}")
         return regulators_found
 
-
     def search_several_controller_table_algorithm(self,
                                                   inlet_pressure: float,
                                                   output_pressure: float,
@@ -183,98 +185,102 @@ class ExelMethod:
         # Put your sheet in the loader
         regulators_found = 0
         i_row = 0
-        self.logger.info(f"Обрабатываем лист {sheet.title=}")
-        for row in sheet.iter_rows(values_only=True):
-            if i_row == 0:
-                saddle = row[0]
-                self.logger.debug(f"Седло: {saddle=}")
+        print(f"Поиск регулятора по  {inlet_pressure} {output_pressure} {traffic_capacity}")
+        try:
+            for row in sheet.iter_rows(values_only=True):
+                print(f"{row=}")
+                print(f"{len(row)=}")
+                if i_row == 0:
+                    saddle = row[0]
 
-            for i_cell in range(len(row)):
-                if i_row == 2 and i_cell != 0:
+                for i_cell in range(len(row)):
+                    # print(f"{i_cell=}")
+                    if i_row == 2 and i_cell != 0:
 
-                    # Ищим подходящие выходные давления, как по диапазону - так и по единичным значениям
-                    mb_diap_Paut = str(row[i_cell]).replace("\xa0", '').replace(" ", '').replace(",", '.').split("-")
-                    self.logger.debug(f"Выходное давление (неск. устр.): {mb_diap_Paut}")
+                        # Ищим подходящие выходные давления, как по диапазону - так и по единичным значениям
+                        mb_diap_Paut = str(row[i_cell]).replace("\xa0", '').replace(" ", '').replace(",", '.').split("-")
+                        print(f"{mb_diap_Paut=}")
+                        if len(mb_diap_Paut) == 2:
+                            # Если ячейка выходного давления является диапазоном
+                            name_devace = sheet[get_excel_column(i_cell + 1) + "1"].value
+                            print(f"{name_devace=}")
+                            if float(mb_diap_Paut[0]) <= float(output_pressure) <= float(mb_diap_Paut[1]):
+                                row_scr_i = 0
+                                for row_scr in sheet.iter_rows(values_only=True):
+                                    if row_scr_i > 2:
+                                        mb_diap_Pain = str(row_scr[0]).replace("\xa0", '').replace(" ", '').replace(",",
+                                                                                                                    '.').split("-")
+                                        print(f"{mb_diap_Pain=}")
 
-                    if len(mb_diap_Paut) == 2:
-                        # Если ячейка выходного давления является диапазоном
-                        name_device = sheet[self.get_excel_column(i_cell + 1) + "1"].value
-                        self.logger.debug(f"Устройство: {name_device}")
+                                        # Если ячейка входного давления является диапазоном
+                                        if len(mb_diap_Pain) == 2:
+                                            if float(mb_diap_Pain[0]) <= float(inlet_pressure) <= float(mb_diap_Pain[1]):
 
-                        if float(mb_diap_Paut[0]) <= float(output_pressure) <= float(mb_diap_Paut[1]):
-                            print(mb_diap_Paut[0],output_pressure,mb_diap_Paut[1])
-                            row_scr_i = 0
-                            for row_scr in sheet.iter_rows(values_only=True):
-                                if row_scr_i > 2:
-                                    mb_diap_Pain = str(row_scr[0]).replace("\xa0", '').replace(" ", '').replace(",",'.').split("-")
-                                    print(mb_diap_Pain)
-                                    # Если ячейка входного давления является диапазоном
-                                    if len(mb_diap_Pain) == 2:
-                                        if float(mb_diap_Pain[0]) <= float(inlet_pressure) <= float(mb_diap_Pain[1]):
+                                                bandwidth = int(traffic_capacity)
+                                                # Проверяем можем ли мы перевести значение пропускной способности в число
+                                                print(f"{row_scr[i_cell]}")
+                                                if utils.is_int(row_scr[i_cell]):
 
-                                            bandwidth = int(traffic_capacity)
-                                            # Проверяем можем ли мы перевести значение пропускной способности в число
-                                            if utils.is_int(row_scr[i_cell]):
+                                                    # Проверяем, найденная пропускная способность больше ли необходимой, и является ли регулятор для сжиженного газа если необходимо
+                                                    if int(row_scr[i_cell]) >= bandwidth :
+                                                        regulators_found += 1
+                                                        # self.__logging_found_device(name_devace, saddle, row_scr[i_cell],
+                                                        #                             bandwidth, traffic_capacity)
 
-                                                # Проверяем, найденная пропускная способность больше ли необходимой, и является ли регулятор для сжиженного газа если необходимо
-                                                if int(row_scr[i_cell]) >= bandwidth:
-                                                    regulators_found += 1
-                                                    self.logger.info(f"Найден регулятор (неск. устр.): {name_device}, седло {saddle}")
-                                                    # self.__logging_found_device(name_device, saddle, row_scr[i_cell],
-                                                    #                             bandwidth, traffic_capacity)
+                                        # Если ячейка входного давления НЕ является диапазоном
+                                        else:
+                                            if float(mb_diap_Pain[0]) == float(inlet_pressure):
+                                                bandwidth = int(traffic_capacity)
+                                                print(f"{row_scr[i_cell]}, {bandwidth}")
+                                                # Проверяем можем ли мы перевести значение пропускной способности в
+                                                test = row_scr[i_cell]
+                                                print(f"{test},{utils.is_int(row_scr[i_cell])}")
+                                                if utils.is_int(row_scr[i_cell]):
+                                                    if int(row_scr[i_cell]) >= bandwidth:
+                                                        print("Должны добавить и пойти дальше")
+                                                        regulators_found += 1
+                                                        # self.__logging_found_device(name_devace, saddle, row_scr[i_cell],
+                                                        #                             bandwidth, traffic_capacity)
 
-                                    # Если ячейка входного давления НЕ является диапазоном
-                                    else:
-                                        if float(mb_diap_Pain[0]) == float(inlet_pressure):
-                                            bandwidth = int(traffic_capacity)
-                                            # Проверяем можем ли мы перевести значение пропускной способности в число
-                                            if utils.is_int(row_scr[i_cell]):
-                                                if int(row_scr[i_cell]) >= bandwidth:
-                                                    regulators_found += 1
-                                                    self.logger.info(f"Найден регулятор (неск. устр.): {name_device}, седло {saddle}")
-                                                    # self.__logging_found_device(name_device, saddle, row_scr[i_cell],
-                                                    #                             bandwidth, traffic_capacity)
+                                    row_scr_i += 1
 
-                                row_scr_i += 1
+                        # Если ячейка выходного давления НЕ является диапазоном и существует
 
-                    # Если ячейка выходного давления НЕ является диапазоном и существует
+                        elif mb_diap_Paut[0] != "None":
+                            if float(output_pressure) == float(mb_diap_Paut[0]):
+                                name_devace = sheet[get_excel_column(i_cell + 1) + "1"].value
+                                row_scr_i = 0
+                                for row_scr in sheet.iter_rows(values_only=True):
+                                    if row_scr_i > 2:
+                                        mb_diap_Pain = str(row_scr[0]).replace("\xa0", '').replace(" ", '').replace(",",
+                                                                                                                    '.').split("-")
+                                        # Если ячейка входного давления является диапазоном
+                                        if len(mb_diap_Pain) == 2:
+                                            if float(mb_diap_Pain[0]) <= float(inlet_pressure) <= float(mb_diap_Pain[1]):
+                                                bandwidth = int(traffic_capacity) + (int(traffic_capacity) / 100)
+                                                # Проверяем можем ли мы перевести значение пропускной способности в число
+                                                if utils.is_int(row_scr[i_cell]):
+                                                    if int(row_scr[i_cell]) >= bandwidth :
+                                                        regulators_found += 1
+                                                        # self.__logging_found_device(name_devace, saddle, row_scr[i_cell],
+                                                        #                             bandwidth, traffic_capacity)
 
-                    elif mb_diap_Paut[0] != "None":
-                        if float(output_pressure) == float(mb_diap_Paut[0]):
-                            name_device = sheet[self.get_excel_column(i_cell + 1) + "1"].valu
-                            row_scr_i = 0
-                            for row_scr in sheet.iter_rows(values_only=True):
-                                if row_scr_i > 2:
-                                    mb_diap_Pain = str(row_scr[0]).replace("\xa0", '').replace(" ", '').replace(",",
-                                                                                                                '.').split(
-                                        "-")
-                                    # Если ячейка входного давления является диапазоном
-                                    if len(mb_diap_Pain) == 2:
-                                        if float(mb_diap_Pain[0]) <= float(inlet_pressure) <= float(mb_diap_Pain[1]):
-                                            bandwidth = int(self.traffic_capacity) + (int(self.traffic_capacity) / 100)
-                                            # Проверяем можем ли мы перевести значение пропускной способности в число
-                                            if utils.is_int(row_scr[i_cell]):
-                                                if int(row_scr[i_cell]) >= bandwidth:
-                                                    regulators_found += 1
-                                                    self.logger.info(f"Найден регулятор (точное совпадение, неск. устр.): {name_device}, седло {saddle}")
-                                                    # self.__logging_found_device(name_device, saddle, row_scr[i_cell],
-                                                    #                             bandwidth, traffic_capacity)
+                                        # Если ячейка входного давления НЕ является диапазоном
+                                        else:
+                                            if float(mb_diap_Pain[0]) == float(inlet_pressure):
+                                                bandwidth = int(traffic_capacity)
+                                                # Проверяем можем ли мы перевести значение пропускной способности в число
+                                                if utils.is_int(row_scr[i_cell]):
+                                                    # Если это значение больше или равно необходимого
+                                                    if int(row_scr[i_cell]) >= bandwidth:
+                                                        regulators_found += 1
+                                                        # self.__logging_found_device(name_devace, saddle, row_scr[i_cell],
+                                                        #                             bandwidth, traffic_capacity)
 
-                                    # Если ячейка входного давления НЕ является диапазоном
-                                    else:
-                                        if float(mb_diap_Pain[0]) == float(inlet_pressure):
-                                            bandwidth = int(traffic_capacity)
-                                            # Проверяем можем ли мы перевести значение пропускной способности в число
-                                            if utils.is_int(row_scr[i_cell]):
-                                                # Если это значение больше или равно необходимого
-                                                if int(row_scr[i_cell]) >= bandwidth:
-                                                    regulators_found += 1
-                                                    self.logger.info(f"Найден регулятор (точное совпадение, неск. устр.): {name_device}, седло {saddle}")
-                                                    # self.__logging_found_device(name_device, saddle, row_scr[i_cell],
-                                                    #                             bandwidth, traffic_capacity)
+                                    row_scr_i += 1
+                i_row += 1
+        except ValueError as e:
+            print(e)
 
-                                row_scr_i += 1
-            i_row += 1
-
-        self.logger.info(f"search several controller table algorithm: найдено {regulators_found} регуляторов")
         return regulators_found
+

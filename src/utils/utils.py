@@ -2,21 +2,21 @@ import os
 from contextlib import contextmanager
 
 
-def create_path_folder_for_save(self) -> None:
+def create_path_folder_for_save() -> None:
     """Создаём папку для сохранения файлов записей подбора если её нет.
     получаем путь к этой папке."""
     # Получение текущей директории
-    self.current_dir = os.getcwd()
+    current_dir = os.getcwd()
 
     # Сборка пути к папке
-    self.folder_save_name = "Записи подбора регуляторов"
-    self.folder_path = os.path.join(self.current_dir, self.folder_save_name)
+    folder_save_name = "Записи подбора регуляторов"
+    folder_path = os.path.join(current_dir, folder_save_name)
 
     # Проверка существования папки и создание, если не существует
-    if not os.path.exists(self.folder_path):
-        os.makedirs(self.folder_path)
+    if not os.path.exists(folder_path):
+        os.makedirs(folder_path)
 
-def is_int(self, value) -> bool:
+def is_int(value) -> bool:
     """Функция is_int, принимает значение
     и если это число возвращает True,
     иначе False"""

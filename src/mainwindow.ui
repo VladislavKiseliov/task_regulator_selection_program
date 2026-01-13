@@ -1465,20 +1465,63 @@
                 </layout>
                </item>
               <item>
-               <widget class="QPlainTextEdit" name="plainTextEdit">
-                <property name="font">
-                 <font>
-                  <pointsize>10</pointsize>
-                 </font>
-                </property>
-                <property name="readOnly">
-                 <bool>true</bool>
-                </property>
-                <property name="placeholderText">
-                 <string>Результаты расчета будут отображены здесь...</string>
-                </property>
-               </widget>
-              </item>
+                 <widget class="QScrollArea" name="regulatorsScrollArea">
+                  <property name="widgetResizable">
+                   <bool>true</bool>
+                  </property>
+                  <property name="sizePolicy">
+                   <sizepolicy hsizetype="Preferred" vsizetype="Fixed">
+                    <horstretch>0</horstretch>
+                    <verstretch>0</verstretch>
+                   </sizepolicy>
+                  </property>
+                  <property name="minimumSize">
+                   <size>
+                    <width>0</width>
+                    <height>250</height> <!-- минимальная высота -->
+                   </size>
+                  </property>
+                  <property name="maximumSize">
+                   <size>
+                    <width>16777215</width>
+                    <height>300</height> <!-- МАКСИМАЛЬНАЯ ВЫСОТА — КЛЮЧЕВО! -->
+                   </size>
+                  </property>
+                  <property name="frameShape">
+                   <enum>QFrame::StyledPanel</enum>
+                  </property>
+                  <widget class="QWidget" name="regulatorsScrollContent">
+                   <property name="geometry">
+                    <rect>
+                     <x>0</x>
+                     <y>0</y>
+                     <width>380</width>
+                     <height>250</height>
+                    </rect>
+                   </property>
+                  <property name="styleSheet">
+                    <string notr="true">background-color: white;</string>
+                  </property>
+                   <layout class="QVBoxLayout" name="regulatorsLayout">
+                    <property name="spacing">
+                     <number>1</number>
+                    </property>
+                    <property name="leftMargin">
+                     <number>1</number>
+                    </property>
+                    <property name="topMargin">
+                     <number>1</number>
+                    </property>
+                    <property name="rightMargin">
+                     <number>1</number>
+                    </property>
+                    <property name="bottomMargin">
+                     <number>1</number>
+                    </property>
+                   </layout>
+                  </widget>
+                 </widget>
+                </item>
               <item>
                <widget class="QPushButton" name="pushButton_selected_scheme">
                 <property name="minimumSize">

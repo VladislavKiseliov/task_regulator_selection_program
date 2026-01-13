@@ -113,7 +113,7 @@ class SelRegulator:
         # # Кнопка "Подобрать изделие" - вызывает метод select_product_type
         # self.ui.pushButton_selected_scheme.clicked.connect(self.select_product_type)
         # self.ui.pushButton_selected_scheme.clicked.connect(lambda : self.show_error_message("Error"))
-        self.ui.pushButton_selected_scheme.clicked.connect(lambda: self.show_error("Error"))
+        self.ui.pushButton_selected_scheme.clicked.connect(self.add_test_regulators)
 
         #Подключение событий изменения текста в полях калькулятора
 
@@ -805,3 +805,91 @@ class SelRegulator:
         """
 
         self.MainWindow.show()
+
+    def create_regulator_block(self, name: str, saddle: str, inlet: float, outlet: float, kv: int):
+        frame = QtWidgets.QFrame()
+        frame.setFrameShape(QtWidgets.QFrame.NoFrame)
+        frame.setFixedHeight(55)
+
+        checkbox = QtWidgets.QCheckBox()
+        label = QtWidgets.QLabel(
+            f"<b>{name}</b><br>"
+            f"Седло: {saddle} | Pвх: {inlet} МПа | Pвых: {outlet} МПа | Kv: {kv}"
+        )
+        label.setWordWrap(False)
+        label.setStyleSheet("padding-left: 5px;")
+
+        layout = QtWidgets.QHBoxLayout(frame)
+        layout.addWidget(checkbox)
+        layout.addWidget(label)
+        layout.addStretch()
+
+        # Сохраняем данные прямо в виджете
+        frame.checkbox = checkbox
+        frame.name = name
+
+        return frame
+
+    def add_test_regulators(self):
+        try:
+            # Очистка старых блоков
+            while self.ui.regulatorsLayout.count():
+                item = self.ui.regulatorsLayout.takeAt(0)
+                if item.widget():
+                    item.widget().deleteLater()
+
+            # Тестовые данные
+            test_regs = [
+                {"name": "Регулятор РДСК-50", "saddle": "DN50", "inlet": 0.6, "outlet": 0.2, "kv": 120},
+                {"name": "Регулятор РДГ-32", "saddle": "DN32", "inlet": 1.2, "outlet": 0.3, "kv": 85},
+                {"name": "Регулятор РДУ-100", "saddle": "DN100", "inlet": 1.6, "outlet": 0.4, "kv": 210},
+                {"name": "Регулятор РДУ-120", "saddle": "DN120", "inlet": 1.8, "outlet": 0.5, "kv": 220},
+                {"name": "Регулятор РДУ-130", "saddle": "DN130", "inlet": 2.0, "outlet": 0.6, "kv": 230},
+                {"name": "Регулятор РДУ-140", "saddle": "DN140", "inlet": 2.2, "outlet": 0.7, "kv": 240},
+
+            ]
+
+            for reg in test_regs:
+                block = self.create_regulator_block(
+                    name=reg["name"],
+                    saddle=reg["saddle"],
+                    inlet=reg["inlet"],
+                    outlet=reg["outlet"],
+                    kv=reg["kv"]
+                )
+                self.ui.regulatorsLayout.addWidget(block)
+
+            # Добавляем растягиватель, чтобы блоки не прилипали к низу
+            self.ui.regulatorsLayout.addStretch()
+        except ValueError as e:
+            print(e)
+
+
+    def show_found_regulators(self, regulators_list):
+        # Очистка старых блоков
+        while self.regulatorsLayout.count():
+            item = self.regulatorsLayout.takeAt(0)
+            if item.widget():
+                item.widget().deleteLater()
+
+        # Добавление новых
+        for reg in regulators_list:
+            block = self.create_regulator_block(
+                name=reg["name"],
+                saddle=reg["saddle"],
+                inlet=reg["inlet_pressure"],
+                outlet=reg["output_pressure"],
+                kv=reg["capacity"]
+            )
+            self.regulatorsLayout.addWidget(block)
+
+        # Добавим "растягиватель", чтобы блоки не прилипали к низу
+        self.regulatorsLayout.addStretch()
+
+    def get_selected_regulators(self) -> list[str]:
+        selected = []
+        for i in range(self.regulatorsLayout.count() - 1):  # -1, чтобы пропустить addStretch
+            widget = self.regulatorsLayout.itemAt(i).widget()
+            if hasattr(widget, 'checkbox') and widget.checkbox.isChecked():
+                selected.append(widget.name)
+        return selected

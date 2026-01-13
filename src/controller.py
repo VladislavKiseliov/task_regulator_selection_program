@@ -390,6 +390,7 @@ class Controller:
                 workbook = openpyxl.load_workbook(os.path.normpath(path_file), read_only=True, data_only=True)
 
                 # --- Анализ одного файла ---
+                print(f"Запуск одного фпйла {workbook} {PIn} {POt} {bandwidth}")
                 found = self.conduct_analysis(workbook, PIn, POt, bandwidth)
 
                 if found == 0:
@@ -399,12 +400,12 @@ class Controller:
                     found = self.conduct_analysis(workbook, PIn_adj, POt_adj, bandwidth)
 
                 total_regulators_found += found
-                self.log.info("В файле %s найдено %d регуляторов", path_file, found)
+                self.logger.info("В файле %s найдено %d регуляторов", path_file, found)
 
             except Exception as e:
                 error_msg = f"Ошибка при обработке файла: {os.path.basename(path_file)}"
                 self.sel_ragulator.show_error_message(error_msg)
-                # self.log.exception("Критическая ошибка при анализе файла %s: %s", path_file,e)
+                self.logger.exception("Критическая ошибка при анализе файла %s: %s", path_file,e)
 
         # 8. Финализация
         self.sel_ragulator.update_status_worck("Ожидание работы")
@@ -412,9 +413,9 @@ class Controller:
 
         # Опционально: показать итоговое сообщение
         if total_regulators_found == 0:
-            self.show_info_message("Подходящие регуляторы не найдены.")
+            self.sel_ragulator.show_info_message("Подходящие регуляторы не найдены.")
         else:
-            self.show_info_message(f"Найдено {total_regulators_found} подходящих регуляторов.")
+            self.sel_ragulator.show_info_message(f"Найдено {total_regulators_found} подходящих регуляторов.")
 
     def conduct_analysis(self, workbook: str,
                          inlet_pressure: float,
@@ -425,13 +426,14 @@ class Controller:
         Возвращает колличество найденных девайсов в файле."""
         self.logger.info("Начинаем анализ Excel-файла: %s", workbook)
         self.logger.debug("Доступные листы в книге: %s", workbook.sheetnames)
-
+        print(f"Параметры для поиска  {inlet_pressure} {output_pressure} {traffic_capacity}")
         regulators_found = 0
         print(f"{workbook.sheetnames=}")
 
         for sheet_name in workbook.sheetnames:
             sheet = workbook[sheet_name]
             self.logger.debug("Обрабатываем лист: %s", sheet_name)
+            print(f"{sheet=}")
 
             try:
                 # Проверяем признак типа таблицы в ячейке C1
@@ -450,13 +452,13 @@ class Controller:
                     self.logger.debug("На листе %s найдено регуляторов: %d", sheet_name, found)
 
             except Exception as e:
-                self.log.error(
+                self.logger.error(
                     "Ошибка при обработке листа %s: %s",
                     sheet_name, str(e), exc_info=True
                 )
                 continue  # Пропускаем лист при ошибке
 
-        self.log.info(
+        self.logger.info(
             "Анализ файла %s завершён. Найдено подходящих регуляторов: %d",
             workbook, regulators_found
         )
