@@ -45,6 +45,7 @@ class Controller:
         print("Зарегестрировали функцию")
         self.callback.register("make_calculation", self.make_calculation)
         self.callback.register("replacement_button_pressed", self.replacement_button_pressed)
+        self.callback.register("search_sheme",self.search_sheme)
 
     def make_calculation(self) -> None:
         """
@@ -391,16 +392,16 @@ class Controller:
 
                 # --- Анализ одного файла ---
                 print(f"Запуск одного фпйла {workbook} {PIn} {POt} {bandwidth}")
-                found = self.conduct_analysis(workbook, PIn, POt, bandwidth)
+                found:Dict[str,Dict[str,int]] = self.conduct_analysis(workbook, PIn, POt, bandwidth)
 
-                if found == 0:
+                if len(found) == 0:
                     self.logger.warning("Точное совпадение не найдено в файле %s. Ищем ближайшие значения.", path_file)
                     finder = FoundCorValue(workbook, PIn, POt)
                     PIn_adj, POt_adj = finder()
                     found = self.conduct_analysis(workbook, PIn_adj, POt_adj, bandwidth)
 
-                total_regulators_found += found
-                self.logger.info("В файле %s найдено %d регуляторов", path_file, found)
+                total_regulators_found = len(found)
+                self.logger.info("В файле %s найдено %d регуляторов", path_file, len(found))
 
             except Exception as e:
                 error_msg = f"Ошибка при обработке файла: {os.path.basename(path_file)}"
@@ -408,6 +409,7 @@ class Controller:
                 self.logger.exception("Критическая ошибка при анализе файла %s: %s", path_file,e)
 
         # 8. Финализация
+        self.sel_ragulator.show_found_regulators(found)
         self.sel_ragulator.update_status_worck("Ожидание работы")
         self.logger.info("Подбор завершён. Всего найдено регуляторов: %d", total_regulators_found)
 
@@ -427,7 +429,7 @@ class Controller:
         self.logger.info("Начинаем анализ Excel-файла: %s", workbook)
         self.logger.debug("Доступные листы в книге: %s", workbook.sheetnames)
         print(f"Параметры для поиска  {inlet_pressure} {output_pressure} {traffic_capacity}")
-        regulators_found = 0
+        regulators_found = {}
         print(f"{workbook.sheetnames=}")
 
         for sheet_name in workbook.sheetnames:
@@ -442,14 +444,14 @@ class Controller:
 
                 if c1_value is None or c1_value == "":
                     self.logger.info("Лист %s: обнаружен формат «один регулятор на лист»", sheet_name)
-                    found = self.excel.search_one_controller_table_algorithm(inlet_pressure, output_pressure, traffic_capacity, sheet)
-                    regulators_found += found
-                    self.logger.debug("На листе %s найдено регуляторов: %d", sheet_name, found)
+                    found :Dict[str,Dict[str,int]]= self.excel.search_one_controller_table_algorithm(inlet_pressure, output_pressure, traffic_capacity, sheet)
+                    regulators_found.update(found)
+                    self.logger.debug("На листе %s найдено регуляторов: %d", sheet_name, len(found))
                 else:
                     self.logger.info("Лист %s: обнаружен формат «несколько регуляторов на лист»", sheet_name)
-                    found = self.excel.search_several_controller_table_algorithm(inlet_pressure, output_pressure, traffic_capacity, sheet)
-                    regulators_found += found
-                    self.logger.debug("На листе %s найдено регуляторов: %d", sheet_name, found)
+                    found:Dict[str,Dict[str,int]] = self.excel.search_several_controller_table_algorithm(inlet_pressure, output_pressure, traffic_capacity, sheet)
+                    regulators_found.update(found)
+                    self.logger.debug("На листе %s найдено регуляторов: %d", sheet_name, len(found))
 
             except Exception as e:
                 self.logger.error(
@@ -460,14 +462,21 @@ class Controller:
 
         self.logger.info(
             "Анализ файла %s завершён. Найдено подходящих регуляторов: %d",
-            workbook, regulators_found
+            workbook, len(regulators_found)
         )
         return regulators_found
 
 
 
 
+    def search_sheme(self):
+        gas_equipment_config = self.sel_ragulator.select_product_type()
+        self.sel_ragulator.search_file_name(gas_equipment_config)
 
+
+if __name__ == "__main__":
+
+    pass
 
 
 

@@ -1492,18 +1492,35 @@
 
                     <!-- Второй элемент: доп. информация -->
                     <item>
-                      <widget class="QPlainTextEdit" name="plainTextEdit_2">
-                        <property name="font">
-                          <font>
-                            <pointsize>10</pointsize>
-                          </font>
-                        </property>
-                        <property name="readOnly">
+                      <widget class="QScrollArea" name="ShemesScrollArea">
+                        <property name="widgetResizable">
                           <bool>true</bool>
                         </property>
-                        <property name="placeholderText">
-                          <string>Дополнительная информация...</string>
+                        <property name="frameShape">
+                          <enum>QFrame::StyledPanel</enum>
                         </property>
+                        <widget class="QWidget" name="ShemesScrollContent">
+                          <property name="styleSheet">
+                            <string notr="true">background-color: white;</string>
+                          </property>
+                          <layout class="QVBoxLayout" name="ShemesLayout">
+                            <property name="spacing">
+                              <number>1</number>
+                            </property>
+                            <property name="leftMargin">
+                              <number>1</number>
+                            </property>
+                            <property name="topMargin">
+                              <number>1</number>
+                            </property>
+                            <property name="rightMargin">
+                              <number>1</number>
+                            </property>
+                            <property name="bottomMargin">
+                              <number>1</number>
+                            </property>
+                          </layout>
+                        </widget>
                       </widget>
                     </item>
 

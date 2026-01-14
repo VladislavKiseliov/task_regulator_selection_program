@@ -1,5 +1,5 @@
 import os
-from typing import List
+from typing import List, Dict
 import logging
 
 from src.MiniFunc import get_excel_column
@@ -61,7 +61,7 @@ class ExelMethod:
                                               inlet_pressure: float,
                                               output_pressure: float,
                                               traffic_capacity: float,
-                                              sheet) -> int:
+                                              sheet) -> Dict[str, Dict[str, int]]:
         """Функция search_one_controller_table_algorithm, принимает
         данные поиска и лист с таблицей формата: одно устройство
         на одном листе. И добавляет девайс в найденные если
@@ -69,32 +69,25 @@ class ExelMethod:
         1 если устройство соответствует"""
 
         self.logger.info(f"Начало обработки листа '{sheet.title}' (одно устройство)")
-        regulators_found = 0
+        regulators_found = {}
         i_row = 0
         self.logger.info(f"Обрабатываем лист {sheet.title=}")
         for row in sheet.iter_rows(values_only=True):
             if i_row == 0:
                 name_device = row[0]
-                if name_device not in self.data:
-                    self.data[name_device] = {}
 
                 saddle = row[1]
-                self.data[name_device][saddle] = {}
                 self.logger.debug(f"Устройство: {name_device}, седло: {saddle}")
 
             if i_row == 1:
                 unit_Pin = row[0]
                 unit_Out = row[1]
 
-                self.data[name_device][saddle]['unit_Pin'] = unit_Pin
-                self.data[name_device][saddle]['unit_Out'] = unit_Out
-                self.data[name_device][saddle]['data_P'] = {}
                 self.logger.debug(f"Единицы измерения: Pin={unit_Pin}, Pout={unit_Out}")
 
             for i_cell in range(len(row)):
                 if i_row == 2 and i_cell != 0:
                     # Ищим подходящие выходные давления, как по диапазону - так и по единичным значениям
-
                     mb_diap_Paut = str(row[i_cell]).replace("\xa0", '').replace(" ", '').replace(",", '.').split("-")
                     if len(mb_diap_Paut) == 2:
                         # Если ячейка выходного давления является диапазоном
@@ -102,24 +95,16 @@ class ExelMethod:
                             row_scr_i = 0
                             for row_scr in sheet.iter_rows(values_only=True):
                                 if row_scr_i > 2:
-                                    mb_diap_Pain = str(row_scr[0]).replace("\xa0", '').replace(" ", '').replace(",",
-                                                                                                                '.').split(
-                                        "-")
-
+                                    mb_diap_Pain = str(row_scr[0]).replace("\xa0", '').replace(" ", '').replace(",",'.').split("-")
                                     # Если ячейка входного давления является диапазоном
                                     if len(mb_diap_Pain) == 2:
                                         if float(mb_diap_Pain[0]) <= float(inlet_pressure) <= float(mb_diap_Pain[1]):
-
                                             bandwidth = int(traffic_capacity)
                                             # Проверяем можем ли мы перевести значение пропускной способности в число
                                             if utils.is_int(row_scr[i_cell]):
                                                 # Проверяем, найденная пропускная способность больше ли необходимой, и является ли регулятор для сжиженного газа если необходимо
                                                 if int(row_scr[i_cell]) >= bandwidth:
-                                                    regulators_found += 1
-
-                                                    # self.__logging_found_device(name_device, saddle, row_scr[i_cell],
-                                                    #                             bandwidth, traffic_capacity)
-
+                                                    regulators_found[name_device] = {"saddle": saddle,"currentBandwidth":row_scr[i_cell],"bandwidth":bandwidth}
 
                                     # Если ячейка входного давления НЕ является диапазоном
                                     else:
@@ -127,10 +112,8 @@ class ExelMethod:
                                             bandwidth = int(traffic_capacity)
                                             # Проверяем можем ли мы перевести значение пропускной способности в число
                                             if utils.is_int(row_scr[i_cell]):
-                                                if int(row_scr[i_cell]) >= bandwidth:
-                                                    regulators_found += 1
-                                                    # self.__logging_found_device(name_device, saddle, row_scr[i_cell],
-                                                    #                             bandwidth, traffic_capacity)
+                                                if utils.is_int(row_scr[i_cell]) >= bandwidth:
+                                                    regulators_found[name_device] = {"saddle": saddle,"currentBandwidth": row_scr[i_cell],"bandwidth":bandwidth}
 
                                 row_scr_i += 1
 
@@ -140,20 +123,16 @@ class ExelMethod:
                             row_scr_i = 0
                             for row_scr in sheet.iter_rows(values_only=True):
                                 if row_scr_i > 2:
-                                    mb_diap_Pain = str(row_scr[0]).replace("\xa0", '').replace(" ", '').replace(",",
-                                                                                                                '.').split(
-                                        "-")
+                                    mb_diap_Pain = str(row_scr[0]).replace("\xa0", '').replace(" ", '').replace(",",'.').split("-")
 
                                     # Если ячейка входного давления является диапазоном
                                     if len(mb_diap_Pain) == 2:
                                         if float(mb_diap_Pain[0]) <= float(inlet_pressure) <= float(mb_diap_Pain[1]):
-                                            bandwidth = int(self.traffic_capacity) + (int(self.traffic_capacity) / 100)
+                                            bandwidth = int(traffic_capacity) + (int(traffic_capacity) / 100)
                                             # Проверяем можем ли мы перевести значение пропускной способности в число
                                             if utils.is_int(row_scr[i_cell]):
-                                                if int(row_scr[i_cell]) >= bandwidth:
-                                                    regulators_found += 1
-                                                    # self.__logging_found_device(name_device, saddle, row_scr[i_cell],
-                                                    #                             bandwidth, traffic_capacity)
+                                                if utils.is_int(row_scr[i_cell]) >= bandwidth:
+                                                    regulators_found[name_device] = {"saddle": saddle,"currentBandwidth": row_scr[i_cell],"bandwidth":bandwidth}
 
                                     # Если ячейка входного давления НЕ является диапазоном
                                     else:
@@ -162,10 +141,8 @@ class ExelMethod:
                                             # Проверяем можем ли мы перевести значение пропускной способности в число
                                             if utils.is_int(row_scr[i_cell]):
                                                 # Если это значение больше или равно необходимого
-                                                if int(row_scr[i_cell]) >= bandwidth :
-                                                    regulators_found += 1
-                                                    # self.__logging_found_device(name_device, saddle, row_scr[i_cell],
-                                                    #                             bandwidth, traffic_capacity)
+                                                if utils.is_int(row_scr[i_cell]) >= bandwidth:
+                                                    regulators_found[name_device] = {"saddle": saddle,"currentBandwidth": row_scr[i_cell],"bandwidth":bandwidth}
 
                                 row_scr_i += 1
             i_row += 1
@@ -176,14 +153,14 @@ class ExelMethod:
                                                   inlet_pressure: float,
                                                   output_pressure: float,
                                                   traffic_capacity: float,
-                                                  sheet) -> int:
+                                                  sheet) -> Dict[str, Dict[str, int]]:
         """Функция search_several_controller_table_algorithm, принимает
         данные поиска и лист с таблицей формата: несколько устройств
         на одном листе. И добавляет девайс в найденные если
         его данные таблицы соответствуют найденным, и возвращает
         1 если устройство соответствует"""
         # Put your sheet in the loader
-        regulators_found = 0
+        regulators_found = {}
         i_row = 0
         print(f"Поиск регулятора по  {inlet_pressure} {output_pressure} {traffic_capacity}")
         try:
@@ -199,18 +176,15 @@ class ExelMethod:
 
                         # Ищим подходящие выходные давления, как по диапазону - так и по единичным значениям
                         mb_diap_Paut = str(row[i_cell]).replace("\xa0", '').replace(" ", '').replace(",", '.').split("-")
-                        print(f"{mb_diap_Paut=}")
                         if len(mb_diap_Paut) == 2:
                             # Если ячейка выходного давления является диапазоном
-                            name_devace = sheet[get_excel_column(i_cell + 1) + "1"].value
-                            print(f"{name_devace=}")
+                            name_device = sheet[get_excel_column(i_cell + 1) + "1"].value
                             if float(mb_diap_Paut[0]) <= float(output_pressure) <= float(mb_diap_Paut[1]):
                                 row_scr_i = 0
                                 for row_scr in sheet.iter_rows(values_only=True):
                                     if row_scr_i > 2:
                                         mb_diap_Pain = str(row_scr[0]).replace("\xa0", '').replace(" ", '').replace(",",
                                                                                                                     '.').split("-")
-                                        print(f"{mb_diap_Pain=}")
 
                                         # Если ячейка входного давления является диапазоном
                                         if len(mb_diap_Pain) == 2:
@@ -223,9 +197,8 @@ class ExelMethod:
 
                                                     # Проверяем, найденная пропускная способность больше ли необходимой, и является ли регулятор для сжиженного газа если необходимо
                                                     if int(row_scr[i_cell]) >= bandwidth :
-                                                        regulators_found += 1
-                                                        # self.__logging_found_device(name_devace, saddle, row_scr[i_cell],
-                                                        #                             bandwidth, traffic_capacity)
+                                                        regulators_found[name_device] = {"saddle": saddle,"currentBandwidth": row_scr[i_cell],"bandwidth":bandwidth}
+
 
                                         # Если ячейка входного давления НЕ является диапазоном
                                         else:
@@ -238,9 +211,7 @@ class ExelMethod:
                                                 if utils.is_int(row_scr[i_cell]):
                                                     if int(row_scr[i_cell]) >= bandwidth:
                                                         print("Должны добавить и пойти дальше")
-                                                        regulators_found += 1
-                                                        # self.__logging_found_device(name_devace, saddle, row_scr[i_cell],
-                                                        #                             bandwidth, traffic_capacity)
+                                                        regulators_found[name_device] = {"saddle": saddle,"currentBandwidth": row_scr[i_cell],"bandwidth":bandwidth}
 
                                     row_scr_i += 1
 
@@ -248,7 +219,7 @@ class ExelMethod:
 
                         elif mb_diap_Paut[0] != "None":
                             if float(output_pressure) == float(mb_diap_Paut[0]):
-                                name_devace = sheet[get_excel_column(i_cell + 1) + "1"].value
+                                name_device = sheet[get_excel_column(i_cell + 1) + "1"].value
                                 row_scr_i = 0
                                 for row_scr in sheet.iter_rows(values_only=True):
                                     if row_scr_i > 2:
@@ -261,9 +232,7 @@ class ExelMethod:
                                                 # Проверяем можем ли мы перевести значение пропускной способности в число
                                                 if utils.is_int(row_scr[i_cell]):
                                                     if int(row_scr[i_cell]) >= bandwidth :
-                                                        regulators_found += 1
-                                                        # self.__logging_found_device(name_devace, saddle, row_scr[i_cell],
-                                                        #                             bandwidth, traffic_capacity)
+                                                        regulators_found[name_device] = {"saddle": saddle,"currentBandwidth": row_scr[i_cell],"bandwidth":bandwidth}
 
                                         # Если ячейка входного давления НЕ является диапазоном
                                         else:
@@ -273,14 +242,12 @@ class ExelMethod:
                                                 if utils.is_int(row_scr[i_cell]):
                                                     # Если это значение больше или равно необходимого
                                                     if int(row_scr[i_cell]) >= bandwidth:
-                                                        regulators_found += 1
-                                                        # self.__logging_found_device(name_devace, saddle, row_scr[i_cell],
-                                                        #                             bandwidth, traffic_capacity)
+                                                        regulators_found[name_device] = {"saddle": saddle,"currentBandwidth": row_scr[i_cell],"bandwidth":bandwidth}
 
                                     row_scr_i += 1
                 i_row += 1
         except ValueError as e:
             print(e)
-
+        print(f"{regulators_found=}")
         return regulators_found
 
