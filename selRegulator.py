@@ -104,10 +104,10 @@ pyinstaller --windowed --onefile --icon=icon.ico --name="Помощник кон
 """
 import sys
 
-from PyQt5 import QtWidgets
 from PyQt5.QtWidgets import QApplication
 
-from src.index import SelRegulator
+from src.Model import Model
+from src.GUI.SelRegulator import SelRegulator
 from src.controller import Controller
 from src.utils.ExelMethod import ExelMethod
 from src.utils.logger_config import setup_logger, create_log_file
@@ -126,7 +126,8 @@ if __name__ == "__main__":
         callback_registry = CallbackRegistry()
         sel_regulator = SelRegulator(callback_registry)
         excel = ExelMethod()
-        controller = Controller(sel_regulator, callback_registry,excel)
+        model = Model()
+        controller = Controller(sel_regulator, callback_registry,excel,model)
 
         # 3. Показываем окно
         sel_regulator.draw_window()

@@ -1,8 +1,6 @@
 import os
 from typing import List, Dict
 import logging
-
-from src.MiniFunc import get_excel_column
 from src.utils import utils
 
 

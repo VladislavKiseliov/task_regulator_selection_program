@@ -32,13 +32,10 @@ from PyQt5.QtGui import QFont, QIcon
 
 
 # Импорты из локальных модулей
-from src.mainwindow import Ui_MainWindow
+from src.GUI.mainwindow import Ui_MainWindow
 from src.FoundCorValue import FoundCorValue
 from src.DropArea import DropArea
 from src.MyLogger import FileWriter
-from src.MiniFunc import calculate_hash, get_excel_column
-from src.utils import *
-
 
 # Список для экспорта
 __all__ = [
@@ -48,6 +45,5 @@ __all__ = [
     'QWidget', 'QMainWindow', 'QMessageBox', 'QPushButton', 'QFileDialog', 'QListWidget', 
     'QListWidgetItem', 'QLineEdit', 'QDialog', 'Qt', 'QTimer', 'QFont', 'QIcon', 
     'DropArea', 'Ui_MainWindow', 'FoundCorValue', 'FileWriter',
-    'calculate_hash', 'get_excel_column'
 ]
 

@@ -1,10 +1,10 @@
-from cx_Freeze.darwintools import printMachOFiles
+from typing import List
 
-from src.index import *
-import src.utils.MathMethod as MathMethod
+from src.GUI.SelRegulator import *
 import logging
 from src.utils.CallbackRegister import CallbackRegistry
 from src.utils.ExelMethod import ExelMethod
+from src.Model import Model
 
 
 class Controller:
@@ -18,7 +18,7 @@ class Controller:
     - обработку ошибок и передачу сообщений в интерфейс.
     """
 
-    def __init__(self, sel_ragulator,callback: CallbackRegistry,excel:ExelMethod) -> None:
+    def __init__(self, sel_ragulator,callback: CallbackRegistry,excel:ExelMethod,model:Model) -> None:
         """
         Инициализирует контроллер.
 
@@ -39,6 +39,7 @@ class Controller:
         self.callback = callback
         self._register_callbacks()
         self.excel = excel
+        self.model = model
 
     def _register_callbacks(self):
         """Register all application callbacks with the callback registry."""
@@ -70,94 +71,6 @@ class Controller:
             self.calculate_speed("Input")
             self.calculate_speed("Output")
 
-    def __calculate_tube_diameter(
-        self,
-        pressure: float,
-        speed: float,
-        auto_speed: bool,
-        gas_consumption: float
-    ) -> float | None:
-        """
-        Обобщённый метод расчёта диаметра трубопровода.
-
-        Args:
-            pressure: давление газа на участке (МПа).
-            speed: скорость газа (м/с). Если `auto_speed=True`, может быть переопределена.
-            auto_speed: флаг автоматического выбора скорости по давлению.
-            gas_consumption: расход газа (м³/ч).
-
-        Returns:
-            Рассчитанный диаметр в мм или None при ошибке.
-
-
-        Raises:
-            ValueError: если входные строки не конвертируются в float.
-            ZeroDivisionError: если в расчёте возникает деление на ноль.
-        """
-        try:
-            # Проверка обязательных параметров
-            if not gas_consumption or not pressure:
-                self.logger.warning("Отсутствие расхода или давления — расчёт диаметра прерван")
-                return None
-
-            # Конвертация давления: МПа → кПа
-            gas_pressure_kpa = float(pressure) * 1000
-
-            # Автовыбор скорости по давлению (если включено)
-            if auto_speed:
-                if gas_pressure_kpa < 50:
-                    speed = 15.0
-                elif 50 <= gas_pressure_kpa <= 600:
-                    speed = 25.0
-                else:
-                    speed = 30.0
-
-            # Проверка скорости
-            if speed <= 0:
-                msg = "Ошибка: скорость газа должна быть > 0."
-                self.logger.error(msg)
-                self.sel_ragulator.show_error(msg)
-                return None
-
-            self.logger.debug(
-                "Вызов математического метода расчёта диаметра. "
-                "Параметры: gas_consumption=%.2f м³/ч, pressure=%.2f МПа, speed=%.2f м/с",
-                gas_consumption, pressure, speed
-            )
-
-            # Чистый расчёт (внешняя функция)
-            diameter_mm = MathMethod.calculated_diametr(
-                gas_consumption=gas_consumption,
-                gas_pressure=gas_pressure_kpa,
-                gas_speed=speed
-            )
-
-            if diameter_mm is None:
-                msg = "Ошибка расчёта диаметра: недопустимые входные данные."
-                self.logger.error(msg)
-                self.sel_ragulator.show_error(msg)
-                return None
-
-            rounded_result = round(diameter_mm, 2)
-            self.logger.info("Расчётный диаметр: %.2f мм", rounded_result)
-            return rounded_result
-
-        except ValueError as e:
-            msg = f"Ошибка: неверный формат числа. Проверьте ввод. ({e})"
-            self.logger.error(msg)
-            self.sel_ragulator.show_error(msg)
-            return None
-        except ZeroDivisionError:
-            msg = "Ошибка: деление на ноль в расчёте диаметра."
-            self.logger.error(msg)
-            self.sel_ragulator.show_error(msg)
-            return None
-        except Exception as e:
-            msg = f"Неизвестная ошибка при расчёте диаметра: {str(e)}"
-            self.logger.exception(msg)  # exception → с трассировкой
-            self.sel_ragulator.show_error(msg)
-            return None
-
     def calculated_diameter(self, io_type: str) -> None:
         """
         Слот для расчёта диаметра трубопровода по заданным параметрам.
@@ -176,11 +89,6 @@ class Controller:
             gas_consumption = self.sel_ragulator.get_bandwidth()
             auto_speed = False
 
-            # Проверка на None перед логированием
-            if gas_consumption is None:
-                self.logger.warning("gas_consumption равен None для %s", io_type)
-                gas_consumption = 0.0  # или пропустите логирование
-
             # Безопасное логирование: используем %r для потенциально None-значений
             self.logger.debug(
                 "Параметры для расчёта диаметра (%s): pressure=%.2f МПа, speed=%.2f м/с, "
@@ -188,7 +96,7 @@ class Controller:
                 io_type, pressure, speed, gas_consumption, auto_speed
             )
 
-            calculated_diameter = self.__calculate_tube_diameter(
+            calculated_diameter = self.model.calculate_tube_diameter(
                 pressure=pressure,
                 speed=speed,
                 auto_speed=auto_speed,
@@ -201,80 +109,14 @@ class Controller:
             else:
                 self.logger.warning("Расчёт диаметра для %s не удался", io_type)
 
+        except ValueError as e:
+            self.logger.exception(e)
+            self.sel_ragulator.show_error(e)
+
         except Exception as e:
             msg = f"Ошибка при расчёте диаметра для {io_type}: {str(e)}"
             self.logger.exception(msg)
             self.sel_ragulator.show_error(msg)
-
-    def calculate_gas_speed(self, gas_pressure: float, diameter: float, gas_consumption: float ) -> float | None:
-        """
-        Обобщённый метод расчёта скорости газа.
-
-        Args:
-            gas_pressure: давление газа (МПа).
-            diameter: диаметр трубопровода (мм).
-            gas_consumption: расход газа (м³/ч).
-
-        Returns:
-            Скорость газа в м/с или None при ошибке.
-
-        Raises:
-            ValueError: ошибка конвертации типов.
-            ZeroDivisionError: деление на ноль в формуле.
-        """
-        try:
-            # Проверка обязательных параметров
-            if not gas_consumption or not gas_pressure or not diameter:
-                self.logger.warning("Отсутствие одного из параметров — расчёт скорости прерван")
-                return None
-
-            if gas_consumption <= 0 or diameter <= 0:
-                msg = "Расход и диаметр должны быть > 0."
-                self.logger.error(msg)
-                self.sel_ragulator.show_error(msg)
-                return None
-
-            # Конвертация давления: МПа → кПа
-            gas_pressure_kpa = gas_pressure * 1000
-
-            self.logger.debug(
-                "Вызов математического метода расчёта скорости. "
-                "Параметры: gas_consumption=%.2f м³/ч, gas_pressure=%.2f МПа (%.1f кПа), diameter=%.1f мм",
-                gas_consumption, gas_pressure, gas_pressure_kpa, diameter
-            )
-
-            # Чистый расчёт (внешняя функция)
-            speed_ms = MathMethod.calculate_speed(
-                gas_consumption=gas_consumption,
-                gas_pressure_kpa=gas_pressure_kpa,
-                diameter_mm=diameter
-            )
-
-            if speed_ms is None:
-                msg = "Ошибка расчёта скорости: недопустимые входные данные."
-                self.logger.error(msg)
-                self.sel_ragulator.show_error(msg)
-                return None
-
-            rounded_result = round(speed_ms, 2)
-            self.logger.info("Расчётная скорость: %.2f м/с", rounded_result)
-            return rounded_result
-
-        except ValueError as e:
-            msg = f"Ошибка: неверный формат числа. Проверьте ввод. ({e})"
-            self.logger.error(msg)
-            self.sel_ragulator.show_error(msg)
-            return None
-        except ZeroDivisionError:
-            msg = "Ошибка: деление на ноль в расчёте скорости."
-            self.logger.error(msg)
-            self.sel_ragulator.show_error(msg)
-            return None
-        except Exception as e:
-            msg = f"Неизвестная ошибка при расчёте скорости: {str(e)}"
-            self.logger.exception(msg)  # exception → с трассировкой
-            self.sel_ragulator.show_error(msg)
-            return None
 
     def calculate_speed(self, io_type: str) -> None:
         """
@@ -299,7 +141,7 @@ class Controller:
                 io_type, pressure, diameter, gas_consumption
             )
 
-            calculated_speed = self.calculate_gas_speed(
+            calculated_speed = self.model.calculate_gas_speed(
                 gas_pressure=pressure,
                 diameter=diameter,
                 gas_consumption=gas_consumption
@@ -311,7 +153,9 @@ class Controller:
             else:
                 self.logger.warning("Расчёт скорости для %s не удался", io_type)
 
-
+        except ValueError as e:
+            self.logger.exception(e)
+            self.sel_ragulator.show_error(e)
         except Exception as e:
             msg = f"Ошибка при расчёте скорости для {io_type}: {str(e)}"
             self.logger.exception(msg)
@@ -409,6 +253,7 @@ class Controller:
                 self.logger.exception("Критическая ошибка при анализе файла %s: %s", path_file,e)
 
         # 8. Финализация
+        print("инал поиска")
         self.sel_ragulator.show_found_regulators(found)
         self.sel_ragulator.update_status_worck("Ожидание работы")
         self.logger.info("Подбор завершён. Всего найдено регуляторов: %d", total_regulators_found)
@@ -470,8 +315,31 @@ class Controller:
 
 
     def search_sheme(self):
+        self.sel_ragulator.delete_block_result("ShemesLayout")
+        regulators: List[str]= self.sel_ragulator.get_selected_regulators()
+        print(f"{regulators=}")
         gas_equipment_config = self.sel_ragulator.select_product_type()
-        self.sel_ragulator.search_file_name(gas_equipment_config)
+        print(" Выозов сборщика имени")
+        for regulator in regulators:
+            filename = self.model.build_scheme_filepath(gas_equipment_config,regulator)
+            parse_file_name : dict = self.model.parse_scheme_filename(filename)
+            full_path = self.model.find_scheme_file(parse_file_name)
+            print(f"{full_path=}")
+            if full_path is not None:
+                print("Вставка что нашли")
+                message = (f"<b>Результаты подбора схемы для ргеулятора {regulator}:</b><br>"
+                           f"Схема {parse_file_name["full_name"]}"
+                           f"Полный путь:"
+                           f'<a href="file:///{os.path.abspath(full_path)}">{full_path}</a>')
+                self.sel_ragulator.show_shemas(message)
+            else:
+                print("Вставка что не  нашли")
+                message = (f"<b>Результаты подбора схемы для ргеулятора {regulator}:</b><br>"
+                           f"Схемы {parse_file_name["full_name"]}"
+                           f"Полного пути не сущетсвует")
+                self.sel_ragulator.show_shemas(message)
+
+            #Вывод ошибки
 
 
 if __name__ == "__main__":
@@ -549,117 +417,32 @@ if __name__ == "__main__":
         # Здесь можно добавить дополнительную логику обработки выбранного типа изделия
         # Например, изменение интерфейса в зависимости от выбранного типа
 
-    def search_file_name(self):
-        """
-            Формирует номенклатурную строку изделия (например, ГРПШ_РДНК-50-400(1000)_1-1_0_4_0_0_У1_0_1_50-50_Л-П)
-            на основе словаря self.gas_equipment_config.
-            """
-
-        # ПРОВЕРКА: Проверка наличия и заполненности словаря
-        if not hasattr(self, 'gas_equipment_config') or not self.gas_equipment_config:
-            # В случае ошибки возвращаем пустую строку
-            return ""
-
-        # Получаем конфигурацию
-        config: Dict[str, Any] = self.gas_equipment_config
-
-        # -----------------------------------------------------------
-        # 2.1. Расчетные и фиксированные части
-        # -----------------------------------------------------------
-
-        # ВАЖНО: Модель регулятора (например, РДНК-50-400(1000)) должна быть определена
-        # в другом месте (после подбора) и сохранена, например, в self.regulator_model_name.
-        regulator_part = "РДНК-50-400(1000)"
-
-        # -----------------------------------------------------------
-        # 2.2. Преобразование значений из словаря в кодовые части
-        # -----------------------------------------------------------
-
-        # 1. Тип изделия: ГРПШ
-        product_type = str(config.get("Тип изделия", ""))
-
-        # 2. Блок линий: 1-1_0 (рабочие-резервные_съемная)
-        working_lines = str(config.get("Количество рабочих линий", 0))
-        reserve_lines = str(config.get("Количество резервных линий", 0))
-        removable_reserve = str(config.get("Наличие съемной резервной линии", 0))
-        lines_block = f"{working_lines}-{reserve_lines}_{removable_reserve}"
-
-        # 3. Исполнение по СТО: 4
-        sto_gprg_full = str(config.get("Исполнение по СТО ГПРГ", "0"))
-
-
-        # 4. Обогрев: 0
-        heating_value = str(config.get("Обогрев", "0"))
-
-        # 5. Телеметрия: 0
-        telemetry_value = str(config.get("Телеметрия", "0"))
-
-        # 6. Климатическое исполнение: У1
-        climate_code = str(config.get("Климатическое исполнение", "У1"))
-
-        # 7. Оснащение УИРГ: 0
-        uirg_equipment_full = str(config.get("Оснащение УИРГ", "0"))
-
-        # 8. Количество выходов: 1
-        gas_outputs = str(config.get("Количество выходов газопроводов", 1))
-
-        # 9. Диаметры: 50-50
-        valve_diameter_in = str(config.get("Диаметр запорной арматуры на входе", "НД"))
-        valve_diameter_out = str(config.get("Диаметр запорной арматуры на выходе", "НД"))
-        diameters_block = f"{valve_diameter_in}-{valve_diameter_out}"
-
-        # 10. Направление: Л-П
-        direction_value = str(config.get("Направление", "Л-П"))
-
-        # -----------------------------------------------------------
-        # 3. Сборка финальной строки в нужной последовательности
-        # -----------------------------------------------------------
-
-        parts = [
-            product_type,
-            regulator_part,
-            lines_block,
-            sto_gprg_full,
-            heating_value,
-            telemetry_value,
-            climate_code,
-            uirg_equipment_full,
-            gas_outputs,
-            diameters_block,
-            direction_value
-        ]
-
-        # Объединяем все части через разделитель "_"
-        print("_".join(map(str, parts)))
-        stri = "_".join(map(str, parts))
-
-        selected_product = stri.split("_")[0]
-        regulator = (stri.split("_")[1]).split("-")[0]
-        print(selected_product, regulator)
-
-
-
-        # 1. Объединение частей пути с помощью оператора /
-        # Python сам поставит нужный разделитель: '\' для Windows или '/' для Linux/Mac.
-        folder = "Каталог"
-        sub_folder = selected_product
-        sub_sub_folder = regulator
-        file_name = stri + ".cdw"
-
-        file_path = Path(folder) / sub_folder /sub_sub_folder/ file_name
-
-        print(f"Путь: {file_path}")
-
-        # 2. Объединение с текущим рабочим каталогом
-        full_path = Path.cwd() / file_path
-        print(f"Полный путь: {full_path}")
-
-        current_text = self.ui.plainTextEdit_2.toPlainText()
-        new_text = current_text + "\n" + self.__split_and_insert_newline(str(full_path))
-        self.ui.plainTextEdit_2.setPlainText(new_text)
-        if full_path.exists():
-
-            print(f"Путь существует: {full_path}")
-
-        else:
-            print(f"Путь не существует: {full_path}")
+    # def search_file_name(self):
+    #
+    #
+    #
+    #
+    #     # 1. Объединение частей пути с помощью оператора /
+    #     # Python сам поставит нужный разделитель: '\' для Windows или '/' для Linux/Mac.
+    #     folder = "Каталог"
+    #     sub_folder = selected_product
+    #     sub_sub_folder = regulator
+    #     file_name = stri + ".cdw"
+    #
+    #     file_path = Path(folder) / sub_folder /sub_sub_folder/ file_name
+    #
+    #     print(f"Путь: {file_path}")
+    #
+    #     # 2. Объединение с текущим рабочим каталогом
+    #     full_path = Path.cwd() / file_path
+    #     print(f"Полный путь: {full_path}")
+    #
+    #     current_text = self.ui.plainTextEdit_2.toPlainText()
+    #     new_text = current_text + "\n" + self.__split_and_insert_newline(str(full_path))
+    #     self.ui.plainTextEdit_2.setPlainText(new_text)
+    #     if full_path.exists():
+    #
+    #         print(f"Путь существует: {full_path}")
+    #
+    #     else:
+    #         print(f"Путь не существует: {full_path}")

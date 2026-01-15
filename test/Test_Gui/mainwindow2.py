@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 
-# Form implementation generated from reading ui file 'mainwindow.ui'
+# Form implementation generated from reading ui file 'mainwindow2.ui'
 #
 # Created by: PyQt5 UI code generator 5.15.11
 #
@@ -26,7 +26,7 @@ class Ui_MainWindow(object):
         self.horizontalLayout.setSpacing(15)
         self.horizontalLayout.setObjectName("horizontalLayout")
         self.scrollArea_main = QtWidgets.QScrollArea(self.centralwidget)
-        self.scrollArea_main.setMinimumSize(QtCore.QSize(500, 0))
+        self.scrollArea_main.setMinimumSize(QtCore.QSize(495, 0))
         self.scrollArea_main.setWidgetResizable(True)
         self.scrollArea_main.setHorizontalScrollBarPolicy(QtCore.Qt.ScrollBarAsNeeded)
         self.scrollArea_main.setVerticalScrollBarPolicy(QtCore.Qt.ScrollBarAsNeeded)
@@ -685,10 +685,8 @@ class Ui_MainWindow(object):
         self.verticalLayout_4.setSpacing(10)
         self.verticalLayout_4.setObjectName("verticalLayout_4")
         self.horizontalLayout_51 = QtWidgets.QHBoxLayout()
-        self.horizontalLayout_51.setStretch(0,1)
-        self.horizontalLayout_51.setStretch(1,1)
-
-        self.horizontalLayout_51.setSpacing(10)
+        self.horizontalLayout_51.setStretch(0, 1)
+        self.horizontalLayout_51.setStretch(1, 1)
         self.horizontalLayout_51.setObjectName("horizontalLayout_51")
         self.regulatorsScrollArea = QtWidgets.QScrollArea(self.scrollAreaWidgetContents)
         self.regulatorsScrollArea.setWidgetResizable(True)
@@ -703,19 +701,13 @@ class Ui_MainWindow(object):
         self.regulatorsLayout.setObjectName("regulatorsLayout")
         self.regulatorsScrollArea.setWidget(self.regulatorsScrollContent)
         self.horizontalLayout_51.addWidget(self.regulatorsScrollArea)
-        self.ShemesScrollArea = QtWidgets.QScrollArea(self.scrollAreaWidgetContents)
-        self.ShemesScrollArea.setWidgetResizable(True)
-        self.ShemesScrollArea.setFrameShape(QtWidgets.QFrame.StyledPanel)
-        self.ShemesScrollArea.setObjectName("ShemesScrollArea")
-        self.ShemesScrollContent = QtWidgets.QWidget()
-        self.ShemesScrollContent.setStyleSheet("background-color: white;")
-        self.ShemesScrollContent.setObjectName("ShemesScrollContent")
-        self.ShemesLayout = QtWidgets.QVBoxLayout(self.ShemesScrollContent)
-        self.ShemesLayout.setContentsMargins(1, 1, 1, 1)
-        self.ShemesLayout.setSpacing(1)
-        self.ShemesLayout.setObjectName("ShemesLayout")
-        self.ShemesScrollArea.setWidget(self.ShemesScrollContent)
-        self.horizontalLayout_51.addWidget(self.ShemesScrollArea)
+        self.plainTextEdit_2 = QtWidgets.QPlainTextEdit(self.scrollAreaWidgetContents)
+        font = QtGui.QFont()
+        font.setPointSize(10)
+        self.plainTextEdit_2.setFont(font)
+        self.plainTextEdit_2.setReadOnly(True)
+        self.plainTextEdit_2.setObjectName("plainTextEdit_2")
+        self.horizontalLayout_51.addWidget(self.plainTextEdit_2)
         self.verticalLayout_4.addLayout(self.horizontalLayout_51)
         self.horizontalLayout_61 = QtWidgets.QHBoxLayout()
         self.horizontalLayout_61.setSpacing(10)
@@ -845,6 +837,7 @@ class Ui_MainWindow(object):
         self.comboBox_direction.setItemText(3, _translate("MainWindow", "П-П"))
         self.pushButton_load_file.setText(_translate("MainWindow", "Загрузить файл"))
         self.pushButton_delete_file.setText(_translate("MainWindow", "Удалить"))
+        self.plainTextEdit_2.setPlaceholderText(_translate("MainWindow", "Дополнительная информация..."))
         self.pushButton_selected_regulator.setText(_translate("MainWindow", "Подобрать регулятор"))
         self.pushButton_selected_scheme.setText(_translate("MainWindow", "Подобрать схему"))
         self.menu.setTitle(_translate("MainWindow", "Файл"))

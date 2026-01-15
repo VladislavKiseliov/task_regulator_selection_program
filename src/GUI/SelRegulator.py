@@ -11,8 +11,6 @@ import src.utils.utils as utils
 
 from src.utils.CallbackRegister import CallbackRegistry
 
-
-
 class SelRegulator:
     def __init__(self,callback_registry: CallbackRegistry):
         """
@@ -491,27 +489,13 @@ class SelRegulator:
 
                 with open(self.conf_file_path, 'w') as file:
                     for elem in self.file_path_list:
-                        self.data_conf["Path"][calculate_hash(elem)] = elem
+                        self.data_conf["Path"][utils.calculate_hash(elem)] = elem
                     
                     json.dump(self.data_conf, file)
 
                     file.close()
         except:
             pass
-
-    def __clear_widget_res_in_app(self) -> None:
-        """Функция для очистки результата работы программы в виджете QPlainTextEdit"""
-        self.ui.plainTextEdit.setReadOnly(False)  # Установка режима редактирования
-        self.ui.plainTextEdit.clear()  # Очистка содержимого виджета
-        self.ui.plainTextEdit.setReadOnly(True)  # Возвращение в режим только для чтения
-
-    def __write_log_wrapper(self, mess:str) ->None:
-        """Функция для добавления данных в виджет логирования в программе"""
-        current_text = self.ui.plainTextEdit.toPlainText()
-        new_text = current_text + "\n" + utils.split_and_insert_newline(mess)
-        self.ui.plainTextEdit.setPlainText(new_text)
-
-        self.logger.write_log(mess)
 
     def show_error_message(self, text_err:str) -> None:
         """Функция show_error_message выводит сообщение об ошибке с заданным текстом
@@ -656,7 +640,8 @@ class SelRegulator:
         file_path = os.path.join(self.current_dir, self.folder_save_name, name_file)
 
         return file_path
-  
+
+    #Взять для основы красивого вывода и удалить
     def __logging_found_device(self, name_devace:str, saddle:str, found_bandwidth:int, need_bandwidth:int, defolt_bandwidth:str)-> None:
         """Функция __logging_found_device, добавляет
         в словарь найденных устройств новые записи
@@ -704,6 +689,14 @@ class SelRegulator:
             
         self.__write_log_wrapper("Направление: {0}".format(direct))
         self.__write_log_wrapper("======================")
+
+    def __write_log_wrapper(self, mess: str) -> None:
+        """Функция для добавления данных в виджет логирования в программе"""
+        current_text = self.ui.plainTextEdit.toPlainText()
+        new_text = current_text + "\n" + utils.split_and_insert_newline(mess)
+        self.ui.plainTextEdit.setPlainText(new_text)
+
+        self.logger.write_log(mess)
 
     def write_log_found_reg(self) -> int:
         """Функция write_log_found_reg, записывает
@@ -810,14 +803,19 @@ class SelRegulator:
 
         self.MainWindow.show()
 
-    def create_regulator_block(self, label_data:Dict[str,str]) -> QFrame:
+    def create_regulator_block(self, name,saddle,currentBandwidth,bandwidth) -> QFrame:
         frame = QtWidgets.QFrame()
         frame.setFrameShape(QtWidgets.QFrame.NoFrame)
         frame.setFixedHeight(55)
 
         checkbox = QtWidgets.QCheckBox()
-        print(f"{label_data["message"]=}")
-        label = QtWidgets.QLabel(str(label_data["message"]))
+
+        label = QtWidgets.QLabel(
+            f"{name}"
+            f"{saddle}"
+            f"{bandwidth}"
+            f"{currentBandwidth}"
+        )
         label.setWordWrap(False)
         label.setStyleSheet("padding-left: 5px;")
 
@@ -828,7 +826,7 @@ class SelRegulator:
 
         # Сохраняем данные прямо в виджете
         frame.checkbox = checkbox
-        frame.name = label_data["name"]
+        frame.name = name
 
         return frame
 
@@ -839,8 +837,6 @@ class SelRegulator:
                 item = self.ui.regulatorsLayout.takeAt(0)
                 if item.widget():
                     item.widget().deleteLater()
-
-
 
             # Тестовые данные
             test_regs = [
@@ -877,15 +873,9 @@ class SelRegulator:
 
     def show_found_regulators(self, regulators: Dict[str,Dict[str,int]], inlet=None, outlet=None, capacity=None):
         try:
-            print("Начали вставку")
-            # Очистка старых блоков (включая заголовок)
-            while self.ui.regulatorsLayout.count():
-                item = self.ui.regulatorsLayout.takeAt(0)
-                if item.widget():
-                    item.widget().deleteLater()
-            print("Удалили старое")
+            self.delete_block_result("regulatorsLayout")
 
-            # === Добавляем информационный заголовок ===
+                    # === Добавляем информационный заголовок ===
             if inlet is not None and outlet is not None and capacity is not None:
                 summary_text = (
                     f"<b>Результаты подбора по параметрам:</b><br>"
@@ -895,8 +885,7 @@ class SelRegulator:
                 summary_label.setStyleSheet("padding: 6px; background-color: #f0f0f0; border-radius: 4px;")
                 summary_label.setWordWrap(True)
                 self.ui.regulatorsLayout.addWidget(summary_label)
-            print("Добавили информацию")
-            print(regulators)
+
             # === Добавляем регуляторы ===
             for name, data in regulators.items():
                 print(name,data)
@@ -927,6 +916,8 @@ class SelRegulator:
         Собирает данные о выбранном типе изделия и сохраняет их.
         """
         #
+        print(f"{self.get_valve_diameter("Input")=}")
+        print(f"{self.get_valve_diameter("Output")=}")
         # # Собираем дополнительную информацию о конфигурации газового оборудования
         gas_equipment_config = {
             "Тип изделия": self.ui.comboBox_product_type.currentText(),
@@ -950,157 +941,31 @@ class SelRegulator:
         print(f"{gas_equipment_config=}")
         return gas_equipment_config
 
-
-    def search_file_name(self,gas_equipment_config):
+    def delete_block_result(self,layout:str) -> None:
         """
-            Формирует номенклатурную строку изделия (например, ГРПШ_РДНК-50-400(1000)_1-1_0_4_0_0_У1_0_1_50-50_Л-П)
-            на основе словаря self.gas_equipment_config.
-            """
-
-        # Получаем конфигурацию
-        config: Dict[str, Any] = gas_equipment_config
-
-        # -----------------------------------------------------------
-        # 2.1. Расчетные и фиксированные части
-        # -----------------------------------------------------------
-
-        # ВАЖНО: Модель регулятора (например, РДНК-50-400(1000)) должна быть определена
-        # в другом месте (после подбора) и сохранена, например, в self.regulator_model_name.
-        regulator_part = "РДНК-50-400(1000)"
-
-        # -----------------------------------------------------------
-        # 2.2. Преобразование значений из словаря в кодовые части
-        # -----------------------------------------------------------
-
-        # 1. Тип изделия: ГРПШ
-        product_type = str(config.get("Тип изделия", ""))
-
-        # 2. Блок линий: 1-1_0 (рабочие-резервные_съемная)
-        working_lines = str(config.get("Количество рабочих линий", 0))
-        reserve_lines = str(config.get("Количество резервных линий", 0))
-        removable_reserve = str(config.get("Наличие съемной резервной линии", 0))
-        lines_block = f"{working_lines}-{reserve_lines}_{removable_reserve}"
-
-        # 3. Исполнение по СТО: 4
-        sto_gprg_full = str(config.get("Исполнение по СТО ГПРГ", "0"))
-
-        # 4. Обогрев: 0
-        heating_value = str(config.get("Обогрев", "0"))
-
-        # 5. Телеметрия: 0
-        telemetry_value = str(config.get("Телеметрия", "0"))
-
-        # 6. Климатическое исполнение: У1
-        climate_code = str(config.get("Климатическое исполнение", "У1"))
-
-        # 7. Оснащение УИРГ: 0
-        uirg_equipment_full = str(config.get("Оснащение УИРГ", "0"))
-
-        # 8. Количество выходов: 1
-        gas_outputs = str(config.get("Количество выходов газопроводов", 1))
-
-        # 9. Диаметры: 50-50
-        valve_diameter_in = str(config.get("Диаметр запорной арматуры на входе", "НД"))
-        valve_diameter_out = str(config.get("Диаметр запорной арматуры на выходе", "НД"))
-        diameters_block = f"{valve_diameter_in}-{valve_diameter_out}"
-
-        # 10. Направление: Л-П
-        direction_value = str(config.get("Направление", "Л-П"))
-
-        # -----------------------------------------------------------
-        # 3. Сборка финальной строки в нужной последовательности
-        # -----------------------------------------------------------
-
-        parts = [
-            product_type,
-            regulator_part,
-            lines_block,
-            sto_gprg_full,
-            heating_value,
-            telemetry_value,
-            climate_code,
-            uirg_equipment_full,
-            gas_outputs,
-            diameters_block,
-            direction_value
-        ]
-
-        # Объединяем все части через разделитель "_"
-        print("_".join(map(str, parts)))
-        stri = "_".join(map(str, parts))
-
-        selected_product = stri.split("_")[0]
-        regulator = (stri.split("_")[1]).split("-")[0]
-        print(selected_product, regulator)
-
-        # 1. Объединение частей пути с помощью оператора /
-        # Python сам поставит нужный разделитель: '\' для Windows или '/' для Linux/Mac.
-        folder = "Каталог"
-        sub_folder = selected_product
-        sub_sub_folder = regulator
-        file_name = stri + ".cdw"
-
-        file_path = Path(folder) / sub_folder / sub_sub_folder / file_name
-
-        print(f"Путь: {file_path}")
-
-        # 2. Объединение с текущим рабочим каталогом
-        full_path = Path.cwd() / file_path
-        print(f"Полный путь: {full_path}")
-
+            Данные метод позволяет отчистить от блоков данных в поле для вывода результатов по поиску регулятора и подбору схемы для него
+        """
         try:
-            print("Начали вставку")
-            # Очистка старых блоков (включая заголовок)
-            while self.ui.ShemesLayout.count():
-                item = self.ui.ShemesLayout.takeAt(0)
+            self.log.info(f"Очищаем поле {layout} для вывода результата")
+            block = getattr(self.ui, layout)
+            while block.count():
+                item = block.takeAt(0)
                 if item.widget():
                     item.widget().deleteLater()
-            print("Удалили старое")
+        except Exception as e:
+            self.log.error(
+                "Ошибка при отчистке поля $s : %s",layout,str(e), exc_info=True)
 
-            # === Добавляем информационный заголовок ===
-
-            summary_text = (f"<b>Результаты подбора по параметрам:</b><br>"
-                            f"{full_path=}")
-
-
-            summary_label = QtWidgets.QLabel(summary_text)
-
+    def show_shemas(self,message:str) -> None:
+        """
+            Вставляет найденные ссылки на схемы в поле вывода для схем
+        """
+        try:
+            summary_label = QtWidgets.QLabel(message)
+            summary_label.setOpenExternalLinks(True)  # ← Ключевая строка!
+            summary_label.setTextFormat(QtCore.Qt.RichText)
             self.ui.ShemesLayout.addWidget(summary_label)
-
-
-            block = self.create_regulator_block({"name":"name_device","message" : full_path})
-
-
             self.ui.ShemesLayout.addStretch()
-
-
-
-            # summary_label.setStyleSheet("padding: 6px; background-color: #f0f0f0; border-radius: 4px;")
             summary_label.setWordWrap(True)
-
-            self.ui.ShemesLayout.addWidget(block)
-            print("Добавили информацию")
-
-
-
-            # print(type(self.ui.plainTextEdit_2))
-            # import threading
-            # print("Текущий поток:", threading.current_thread().name)
-            # print("plainTextEdit_2 is alive:", self.ui.plainTextEdit_2.isVisible())
-            # print("parent:", self.ui.plainTextEdit_2.parent())
-            # current_text = self.ui.plainTextEdit_2.toPlainText()
-            # print(current_text)
-            # new_text = current_text + "\n" + utils.split_and_insert_newline(str(full_path))
-            # print(new_text)
-            # self.ui.plainTextEdit_2.setPlainText(new_text)
-
-        except ValueError as e:
-            print(e)
-            import traceback
-            traceback.print_exc()
-        # if full_path.exists():
-        #
-        #     print(f"Путь существует: {full_path}")
-        #
-        # else:
-        #     print(f"Путь не существует: {full_path}")
+        except Exception as e:
+            self.log.error("Ошибка при добавлении результата в поле вывода $s", str(e), exc_info=True)

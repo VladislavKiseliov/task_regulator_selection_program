@@ -42,6 +42,12 @@
     </property>
         <item>
          <widget class="QScrollArea" name="scrollArea_main">
+          <property name="minimumSize">
+           <size>
+             <width>495</width>   <!-- Минимальный размер левого окна -->
+             <height>0</height>
+           </size>
+          </property>
           <property name="widgetResizable">
            <bool>true</bool>
           </property>
@@ -600,26 +606,6 @@
                 </layout>
                </item>
               </layout>
-             </widget>
-            </item>
-            <item>
-             <widget class="QPushButton" name="pushButton_selected_regulator">
-              <property name="minimumSize">
-               <size>
-                <width>0</width>
-                <height>40</height>
-               </size>
-              </property>
-              <property name="font">
-               <font>
-                <pointsize>11</pointsize>
-                <weight>75</weight>
-                <bold>true</bold>
-               </font>
-              </property>
-              <property name="text">
-               <string>Подобрать регулятор</string>
-              </property>
              </widget>
             </item>
                <!-- Добавляем содержимое второй вкладки -->
@@ -1403,25 +1389,7 @@
           <property name="bottomMargin">
            <number>0</number>
           </property>
-          <item>
-           <widget class="QScrollArea" name="scrollArea">
-            <property name="widgetResizable">
-             <bool>true</bool>
-            </property>
-            <widget class="QWidget" name="scrollAreaWidgetContents">
-             <property name="geometry">
-              <rect>
-               <x>0</x>
-               <y>0</y>
-               <width>398</width>
-               <height>500</height>
-              </rect>
-             </property>
-             <layout class="QVBoxLayout" name="verticalLayout_4">
-              <property name="spacing">
-               <number>10</number>
-              </property>
-              <item>
+             <item>
                 <layout class="QHBoxLayout" name="horizontalLayout_4">
                  <property name="spacing">
                   <number>10</number>
@@ -1464,71 +1432,135 @@
                  </item>
                 </layout>
                </item>
+          <item>
+           <widget class="QScrollArea" name="scrollArea">
+            <property name="widgetResizable">
+             <bool>true</bool>
+            </property>
+            <widget class="QWidget" name="scrollAreaWidgetContents">
+             <property name="geometry">
+              <rect>
+               <x>0</x>
+               <y>0</y>
+               <width>398</width>
+               <height>500</height>
+              </rect>
+             </property>
+             <layout class="QVBoxLayout" name="verticalLayout_4">
+              <property name="spacing">
+               <number>10</number>
+              </property>
               <item>
-                 <widget class="QWidget" name="regulatorsPlaceholder">
-                  <property name="minimumSize">
-                   <size>
-                    <width>0</width>
-                    <height>100</height> <!-- ← КЛЮЧЕВОЕ ИЗМЕНЕНИЕ -->
-                   </size>
-                  </property>
-                  <property name="styleSheet">
-                   <string notr="true">background-color: white; border: 1px solid #ccc;</string>
-                  </property>
-                  <layout class="QVBoxLayout" name="regulatorsLayout">
-                   <property name="spacing">
-                    <number>6</number>
-                   </property>
-                   <property name="leftMargin">
-                    <number>8</number>
-                   </property>
-                   <property name="topMargin">
-                    <number>8</number>
-                   </property>
-                   <property name="rightMargin">
-                    <number>8</number>
-                   </property>
-                   <property name="bottomMargin">
-                    <number>8</number>
-                   </property>
+                  <layout class="QHBoxLayout" name="horizontalLayout_5">
+                    <property name="spacing">
+                      <number>10</number>
+                    </property>
+
+                    <!-- Первый элемент: регуляторы -->
+                    <item>
+                      <widget class="QScrollArea" name="regulatorsScrollArea">
+                        <property name="widgetResizable">
+                          <bool>true</bool>
+                        </property>
+                        <property name="frameShape">
+                          <enum>QFrame::StyledPanel</enum>
+                        </property>
+                        <widget class="QWidget" name="regulatorsScrollContent">
+                          <property name="styleSheet">
+                            <string notr="true">background-color: white;</string>
+                          </property>
+                          <layout class="QVBoxLayout" name="regulatorsLayout">
+                            <property name="spacing">
+                              <number>1</number>
+                            </property>
+                            <property name="leftMargin">
+                              <number>1</number>
+                            </property>
+                            <property name="topMargin">
+                              <number>1</number>
+                            </property>
+                            <property name="rightMargin">
+                              <number>1</number>
+                            </property>
+                            <property name="bottomMargin">
+                              <number>1</number>
+                            </property>
+                          </layout>
+                        </widget>
+                      </widget>
+                    </item>
+
+                    <!-- Второй элемент: доп. информация -->
+                    <item>
+                      <widget class="QPlainTextEdit" name="plainTextEdit_2">
+                        <property name="font">
+                          <font>
+                            <pointsize>10</pointsize>
+                          </font>
+                        </property>
+                        <property name="readOnly">
+                          <bool>true</bool>
+                        </property>
+                        <property name="placeholderText">
+                          <string>Дополнительная информация...</string>
+                        </property>
+                      </widget>
+                    </item>
+
+                    <!-- Добавляем stretch, чтобы оба элемента занимали равное пространство -->
+                    <property name="stretch">
+                      <number>1</number> <!-- для regulatorsScrollArea -->
+                      <number>1</number> <!-- для plainTextEdit_2 -->
+                    </property>
                   </layout>
-                 </widget>
                 </item>
               <item>
-               <widget class="QPushButton" name="pushButton_selected_scheme">
-                <property name="minimumSize">
-                 <size>
-                  <width>0</width>
-                  <height>40</height>
-                 </size>
-                </property>
-                <property name="font">
-                 <font>
-                  <pointsize>11</pointsize>
-                  <weight>75</weight>
-                  <bold>true</bold>
-                 </font>
-                </property>
-                <property name="text">
-                 <string>Подобрать схему</string>
-                </property>
-               </widget>
-              </item>
-              <item>
-               <widget class="QPlainTextEdit" name="plainTextEdit_2">
-                <property name="font">
-                 <font>
-                  <pointsize>10</pointsize>
-                 </font>
-                </property>
-                <property name="readOnly">
-                 <bool>true</bool>
-                </property>
-                <property name="placeholderText">
-                 <string>Дополнительная информация...</string>
-                </property>
-               </widget>
-              </item>
+                <layout class="QHBoxLayout" name="horizontalLayout_6">
+                 <property name="spacing">
+                  <number>10</number>
+                 </property>
+                 <item>
+                     <widget class="QPushButton" name="pushButton_selected_regulator">
+                      <property name="minimumSize">
+                       <size>
+                        <width>0</width>
+                        <height>40</height>
+                       </size>
+                      </property>
+                      <property name="font">
+                       <font>
+                        <pointsize>11</pointsize>
+                        <weight>75</weight>
+                        <bold>true</bold>
+                       </font>
+                      </property>
+                      <property name="text">
+                       <string>Подобрать регулятор</string>
+                      </property>
+                     </widget>
+                    </item>
+                 <item>
+                   <widget class="QPushButton" name="pushButton_selected_scheme">
+                    <property name="minimumSize">
+                     <size>
+                      <width>0</width>
+                      <height>40</height>
+                     </size>
+                    </property>
+                    <property name="font">
+                     <font>
+                      <pointsize>11</pointsize>
+                      <weight>75</weight>
+                      <bold>true</bold>
+                     </font>
+                    </property>
+                    <property name="text">
+                     <string>Подобрать схему</string>
+                    </property>
+                   </widget>
+                </item>
+             </layout>
+            </item>
              </layout>
             </widget>
            </widget>
