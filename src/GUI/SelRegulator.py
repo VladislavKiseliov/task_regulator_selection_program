@@ -1,4 +1,4 @@
-from typing import Callable, Union, Dict, Any
+from typing import Callable, Union, Dict, Any, List
 
 from PyQt5.QtWidgets import QFrame
 from pyexpat.errors import messages
@@ -666,55 +666,6 @@ class SelRegulator:
                                                "Необходимая":need_bandwidth,
                                                "Процент":"{:.2f}".format(100-(((int(found_bandwidth)-int(need_bandwidth))/int(found_bandwidth))*100))}
 
-    def start_initial_log(self) -> None:
-        """start_initial_log добавляет стартовые данные о сканировании в логи"""
-        self.__write_log_wrapper("======================")
-        self.__write_log_wrapper("Поиск регуляторов по следующим параметрам: Входное давление-{0} \
-                                 Выходное давление-{1} Пропускная способность-{2}".format(self.get_pressure("Input"),self.get_pressure("Output"), self.get_bandwidth()))
-        
-        # Добавляем информацию о выбранном типе изделия в лог, если она есть
-        if hasattr(self, 'selected_product_type') and self.selected_product_type:
-            self.__write_log_wrapper(f"Тип изделия: {self.selected_product_type}")
-            
-        # Добавляем информацию о конфигурации газового оборудования в лог, если она есть
-        if hasattr(self, 'gas_equipment_config') and self.gas_equipment_config:
-            self.__write_log_wrapper("Конфигурация газового оборудования:")
-            for key, value in self.gas_equipment_config.items():
-                self.__write_log_wrapper(f"  {key}: {value}")
-         
-        if self.saved_conf_left_to_right:
-            direct = "справа налево"
-        else:
-            direct = "слева направо"
-            
-        self.__write_log_wrapper("Направление: {0}".format(direct))
-        self.__write_log_wrapper("======================")
-
-    def __write_log_wrapper(self, mess: str) -> None:
-        """Функция для добавления данных в виджет логирования в программе"""
-        current_text = self.ui.plainTextEdit.toPlainText()
-        new_text = current_text + "\n" + utils.split_and_insert_newline(mess)
-        self.ui.plainTextEdit.setPlainText(new_text)
-
-        self.logger.write_log(mess)
-
-    def write_log_found_reg(self) -> int:
-        """Функция write_log_found_reg, записывает
-        в файл для логирования все найденные девайсы
-        сортируя их по проценту загрузки"""
-        number_found = 0
-
-        sorted_data = sorted(self.data_found.items(), key=lambda x: float(x[1]["Процент"]), reverse=True)
-        
-        self.list_in_range_value = [item for item in sorted_data if self.saved_conf_minimum_load <= float(item[1]["Процент"]) <= self.saved_conf_maximum_load]
-
-        for key, value in self.list_in_range_value:
-            self.__write_log_wrapper("======================")
-            self.__write_log_wrapper("Регулятор: {}".format(value["Регулятор"]))
-            self.__write_log_wrapper("Седло: {}".format(value["Седло"]))
-            self.__write_log_wrapper("Пропускная способность регулятора при выбранных параметрах: {}".format(value["Пропускная"]))
-            self.__write_log_wrapper("Процент загрузки пропускной спос. регулятора c необходимой пропускной способностью ({}) составляет {}%".format(value["Необходимая"],value["Процент"]))
-
     def __clear_data_found_device(self) -> None:
         """очищает списки найденных регуляторов"""
         self.list_in_range_value = []
@@ -803,32 +754,181 @@ class SelRegulator:
 
         self.MainWindow.show()
 
-    def create_regulator_block(self, name,saddle,currentBandwidth,bandwidth) -> QFrame:
+    def create_regulator_block(self, name, saddle, current_bw, required_bw) -> QtWidgets.QFrame:
+        """
+            Создает графический блок (карточку) с информацией о найденном регуляторе.
+
+            Метод формирует сложный виджет на базе QFrame, включающий в себя:
+            - Чекбокс для выбора регулятора пользователем.
+            - Информационные метки (название, диаметр седла, макс. пропускная способность).
+            - Визуальный индикатор процента загрузки (цветовая схема: зеленый/оранжевый/красный).
+
+            Args:
+                name (str): Модель/Наименование регулятора.
+                saddle (str): Диаметр седла регулятора (мм).
+                current_bw (float): Максимальная пропускная способность выбранной модели (м³/ч).
+                required_bw (float): Требуемая пропускная способность по расчету пользователя (м³/ч).
+
+            Returns:
+                QtWidgets.QFrame: Готовый объект фрейма с настроенной версткой и стилями (QSS).
+                Объект содержит динамические свойства .checkbox и .regulator_name для доступа извне.
+            """
+
         frame = QtWidgets.QFrame()
-        frame.setFrameShape(QtWidgets.QFrame.NoFrame)
-        frame.setFixedHeight(55)
+        frame.setObjectName("regulatorCard")
 
+        # Расчет процента загрузки (как было)
+        try:
+            load_percent = (float(required_bw) / float(current_bw)) * 100 if float(current_bw) > 0 else 0
+            # Цвет: зеленый (<80%), оранжевый (80-95%), красный (>95%)
+            load_color = "#27ae60" if load_percent < 80 else "#e67e22" if load_percent < 95 else "#c0392b"
+        except:
+            load_percent = 0
+            load_color = "#7f8c8d"
+
+        # Стили: Карточка + Увеличенный чекбокс
+        frame.setStyleSheet(f"""
+                #regulatorCard {{
+                    background-color: white;
+                    border: 1px solid #dcdde1;
+                    border-radius: 8px;
+                    margin: 2px;
+                }}
+                #regulatorCard:hover {{
+                    border: 1px solid #3498db;
+                    background-color: #f7f9fc;
+                }}
+                QCheckBox::indicator {{
+                    width: 20px;
+                    height: 20px;
+                }}
+            """)
+
+        main_layout = QtWidgets.QHBoxLayout(frame)
+        main_layout.setContentsMargins(15, 8, 15, 8)
+        main_layout.setSpacing(15)
+
+        # 1. Чекбокс
         checkbox = QtWidgets.QCheckBox()
+        main_layout.addWidget(checkbox)
 
-        label = QtWidgets.QLabel(
-            f"{name}"
-            f"{saddle}"
-            f"{bandwidth}"
-            f"{currentBandwidth}"
-        )
-        label.setWordWrap(False)
-        label.setStyleSheet("padding-left: 5px;")
+        # 2. Основная информация (слева)
+        info_layout = QtWidgets.QVBoxLayout()
+        name_label = QtWidgets.QLabel(f"<b>{name}</b>")
+        name_label.setStyleSheet("font-size: 14px; color: #2c3e50;")
 
-        layout = QtWidgets.QHBoxLayout(frame)
-        layout.addWidget(checkbox)
-        layout.addWidget(label)
-        layout.addStretch()
+        details_text = f"Седло: {saddle} мм | Max Q: {current_bw} м³/ч"
+        details_label = QtWidgets.QLabel(details_text)
+        details_label.setStyleSheet("color: #7f8c8d; font-size: 11px;")
 
-        # Сохраняем данные прямо в виджете
+        info_layout.addWidget(name_label)
+        info_layout.addWidget(details_label)
+        main_layout.addLayout(info_layout)
+
+        # 3. Блок загрузки (справа)
+        load_layout = QtWidgets.QVBoxLayout()
+        load_layout.setAlignment(QtCore.Qt.AlignRight)
+
+        load_val_label = QtWidgets.QLabel(f"{load_percent:.1f}%")
+        load_val_label.setStyleSheet(f"color: {load_color}; font-weight: bold; font-size: 13px;")
+        load_desc_label = QtWidgets.QLabel("загрузка")
+        load_desc_label.setStyleSheet("color: #95a5a6; font-size: 9px; text-transform: uppercase;")
+
+        load_layout.addWidget(load_val_label)
+        load_layout.addWidget(load_desc_label)
+        main_layout.addLayout(load_layout)
+
+        # Ссылки для контроллера
         frame.checkbox = checkbox
-        frame.name = name
+        frame.regulator_name = name
+
+        # --- ЛОГИКА КЛИКА ПО ВСЕЙ КАРТОЧКЕ ---
+        def on_frame_clicked(event):
+            # Переключаем состояние
+            checkbox.setChecked(not checkbox.isChecked())
+            # Визуальный эффект нажатия (опционально)
+            frame.repaint()
+
+        frame.mousePressEvent = on_frame_clicked
+        frame.setCursor(QtCore.Qt.PointingHandCursor)
 
         return frame
+
+    def show_found_regulators(self, regulators: Dict[str, Dict[str, Any]], inlet=None, outlet=None, capacity=None):
+        """
+            Отображает результаты поиска регуляторов в интерфейсе программы.
+
+            Метод отвечает за визуализацию списка найденных моделей. Он очищает предыдущие
+            результаты, формирует информационную панель с исходными параметрами расчета
+            и динамически создает карточки для каждого подходящего регулятора.
+
+            Args:
+                regulators (Dict[str, Dict[str, Any]]): Словарь с данными найденных регуляторов.
+                    Структура: { "Название": {"saddle": "25", "currentBandwidth": 500.0, ...} }.
+                inlet (float, optional): Входное давление (МПа), использованное при поиске.
+                    Используется для вывода в заголовке. По умолчанию None.
+                outlet (float, optional): Выходное давление (МПа), использованное при поиске.
+                    По умолчанию None.
+                capacity (float, optional): Требуемый расход (м³/ч), использованный при поиске.
+                    По умолчанию None.
+
+            Returns:
+                None: Метод напрямую модифицирует пользовательский интерфейс (regulatorsLayout).
+
+            Raises:
+                Exception: Логирует любые ошибки, возникающие в процессе отрисовки виджетов,
+                    предотвращая аварийное завершение работы GUI.
+
+            Note:
+                Если словарь 'regulators' пуст, метод выведет сообщение "Ничего не найдено".
+                Для создания каждой карточки вызывается вспомогательный метод 'create_regulator_block'.
+            """
+
+        try:
+            # Очищаем старые результаты
+            self.delete_block_result("regulatorsLayout")
+            self.log.info("Отображение результатов поиска регуляторов")
+
+            # 1. Шапка с исходными параметрами
+            if all(v is not None for v in [inlet, outlet, capacity]):
+                header_frame = QtWidgets.QFrame()
+                header_frame.setStyleSheet("background-color: #34495e; border-radius: 6px; color: white;")
+                h_layout = QtWidgets.QHBoxLayout(header_frame)
+
+                summary_text = (
+                    f"🎯 <b>Параметры подбора:</b> &nbsp;&nbsp;"
+                    f"P<sub>вх</sub>: {inlet} МПа | P<sub>вых</sub>: {outlet} МПа | Q<sub>треб</sub>: {capacity} м³/ч"
+                )
+                lbl = QtWidgets.QLabel(summary_text)
+                lbl.setStyleSheet("font-size: 12px; padding: 5px;")
+                h_layout.addWidget(lbl)
+                self.ui.regulatorsLayout.addWidget(header_frame)
+
+            # 2. Если ничего не найдено
+            if not regulators:
+                no_res = QtWidgets.QLabel("❌ Подходящих регуляторов не обнаружено")
+                no_res.setAlignment(QtCore.Qt.AlignCenter)
+                no_res.setStyleSheet("color: #7f8c8d; padding: 20px; font-style: italic;")
+                self.ui.regulatorsLayout.addWidget(no_res)
+                return
+
+            # 3. Список карточек
+            for name, data in regulators.items():
+                # Используем нашу новую функцию создания карточки
+                block = self.create_regulator_block(
+                    name=name,
+                    saddle=data.get("saddle", "-"),
+                    current_bw=data.get("currentBandwidth", 0),
+                    required_bw=data.get("bandwidth", capacity if capacity else 0)
+                )
+                self.ui.regulatorsLayout.addWidget(block)
+
+            # Распорка в конце, чтобы карточки не растягивались на весь экран
+            self.ui.regulatorsLayout.addStretch()
+
+        except Exception as e:
+            self.log.error(f"Ошибка при отрисовке регуляторов: {e}", exc_info=True)
+            self.show_error_message("Ошибка при отображении результатов")
 
     def add_test_regulators(self):
         try:
@@ -871,44 +971,38 @@ class SelRegulator:
         except ValueError as e:
             print(e)
 
-    def show_found_regulators(self, regulators: Dict[str,Dict[str,int]], inlet=None, outlet=None, capacity=None):
-        try:
-            self.delete_block_result("regulatorsLayout")
+    def get_selected_regulators(self) -> List[str]:
+        """
+        Сканирует область результатов и формирует список выбранных регуляторов.
 
-                    # === Добавляем информационный заголовок ===
-            if inlet is not None and outlet is not None and capacity is not None:
-                summary_text = (
-                    f"<b>Результаты подбора по параметрам:</b><br>"
-                    f"Pвх: {inlet} МПа | Pвых: {outlet} МПа | Kv: {capacity} м³/ч"
-                )
-                summary_label = QtWidgets.QLabel(summary_text)
-                summary_label.setStyleSheet("padding: 6px; background-color: #f0f0f0; border-radius: 4px;")
-                summary_label.setWordWrap(True)
-                self.ui.regulatorsLayout.addWidget(summary_label)
+        Метод итерируется по всем дочерним виджетам в 'regulatorsLayout', находит
+        объекты карточек и проверяет состояние их внутренних чекбоксов. Используется
+        Контроллером для определения списка моделей, для которых нужно подобрать схемы.
 
-            # === Добавляем регуляторы ===
-            for name, data in regulators.items():
-                print(name,data)
-                block = self.create_regulator_block(
-                    name=name,
-                    saddle=data["saddle"],
-                    currentBandwidth=data["currentBandwidth"],
-                    bandwidth=data["bandwidth"],
-                )
-                self.ui.regulatorsLayout.addWidget(block)
+        Returns:
+            List[str]: Список строк, содержащий названия (наименования) только тех
+            регуляторов, которые были отмечены пользователем.
 
-            self.ui.regulatorsLayout.addStretch()
-            print("Регуляторы добавлены")
-        except ValueError as e:
-            print(e)
+        Note:
+            Метод игнорирует информационные заголовки, разделители и пустые области
+            внутри лайаута благодаря проверке атрибутов hasattr(widget, 'checkbox').
+        """
+        selected_names = []
+        layout = self.ui.regulatorsLayout
 
-    def get_selected_regulators(self) -> list[str]:
-        selected = []
-        for i in range(self.ui.regulatorsLayout.count() - 1):  # -1, чтобы пропустить addStretch
-            widget = self.ui.regulatorsLayout.itemAt(i).widget()
-            if hasattr(widget, 'checkbox') and widget.checkbox.isChecked():
-                selected.append(widget.name)
-        return selected
+        # Проходим по всем элементам лайаута
+        for i in range(layout.count()):
+            item = layout.itemAt(i)
+            widget = item.widget()
+
+            # Проверяем, что это виджет и у него есть нужные нам атрибуты
+            # (чтобы не пытаться проверить чекбокс у распорок или заголовков)
+            if widget and hasattr(widget, 'checkbox') and hasattr(widget, 'regulator_name'):
+                if widget.checkbox.isChecked():
+                    selected_names.append(widget.regulator_name)
+
+        self.log.info(f"Выбрано регуляторов для подбора схем: {len(selected_names)}")
+        return selected_names
 
     def select_product_type(self) -> Dict[str, str|int]:
         """
@@ -941,31 +1035,109 @@ class SelRegulator:
         print(f"{gas_equipment_config=}")
         return gas_equipment_config
 
-    def delete_block_result(self,layout:str) -> None:
+    def delete_block_result(self,layout_name:str) -> None:
         """
             Данные метод позволяет отчистить от блоков данных в поле для вывода результатов по поиску регулятора и подбору схемы для него
         """
         try:
-            self.log.info(f"Очищаем поле {layout} для вывода результата")
-            block = getattr(self.ui, layout)
-            while block.count():
-                item = block.takeAt(0)
-                if item.widget():
-                    item.widget().deleteLater()
-        except Exception as e:
-            self.log.error(
-                "Ошибка при отчистке поля $s : %s",layout,str(e), exc_info=True)
+            layout = getattr(self.ui, layout_name)
+            # Отключаем перерисовку для скорости
+            self.ui.centralwidget.setUpdatesEnabled(False)
 
-    def show_shemas(self,message:str) -> None:
+            while layout.count():
+                item = layout.takeAt(0)
+                widget = item.widget()
+                if widget is not None:
+                    widget.deleteLater()
+                elif item.layout() is not None:
+                    # Если внутри есть вложенные лайауты, их тоже надо чистить
+                    self._clear_layout(item.layout())
+
+            self.ui.centralwidget.setUpdatesEnabled(True)
+        except Exception as e:
+            self.log.error(f"Ошибка при очистке {layout_name}: {e}")
+
+    def create_scheme_block(self, regulator_name, scheme_name, file_path, found=True) -> QtWidgets.QFrame:
+        """Создает визуальный блок для отображения найденной схемы."""
+        frame = QtWidgets.QFrame()
+        frame.setObjectName("schemeCard")
+
+        # Стилизация карточки схемы
+        status_color = "#2980b9" if found else "#c0392b"
+        bg_color = "#f8f9fa" if found else "#fff5f5"
+
+        frame.setStyleSheet(f"""
+            #schemeCard {{
+                background-color: {bg_color};
+                border-left: 5px solid {status_color};
+                border-top: 1px solid #dcdde1;
+                border-right: 1px solid #dcdde1;
+                border-bottom: 1px solid #dcdde1;
+                border-radius: 4px;
+                margin-bottom: 5px;
+            }}
+        """)
+
+        layout = QtWidgets.QVBoxLayout(frame)
+        layout.setContentsMargins(12, 8, 12, 8)
+        layout.setSpacing(4)
+
+        # Заголовок: Имя регулятора
+        title = QtWidgets.QLabel(f"<b>📂 {regulator_name}</b>")
+        title.setStyleSheet("font-size: 13px; color: #2c3e50;")
+
+        # Описание схемы
+        scheme_info = QtWidgets.QLabel(f"Схема: {scheme_name}")
+        scheme_info.setStyleSheet("color: #34495e; font-size: 12px;")
+
+        layout.addWidget(title)
+        layout.addWidget(scheme_info)
+
+        if found:
+            # Ссылка на файл (стилизованная под кнопку или заметную ссылку)
+            path_label = QtWidgets.QLabel(
+                f"🔗 <a href='file:///{file_path}' style='color: #2980b9; text-decoration: none;'>"
+                f"Открыть чертеж в формате CDW</a>"
+            )
+            path_label.setOpenExternalLinks(True)
+            path_label.setToolTip(file_path)  # Показываем полный путь при наведении
+            layout.addWidget(path_label)
+        else:
+            error_label = QtWidgets.QLabel("⚠️ Файл отсутствует в локальном каталоге")
+            error_label.setStyleSheet("color: #e74c3c; font-size: 11px; font-weight: bold;")
+            layout.addWidget(error_label)
+
+        return frame
+
+    def show_shemas(self, regulator_name: str, scheme_name: str, file_path: str, found: bool = True) -> None:
         """
-            Вставляет найденные ссылки на схемы в поле вывода для схем
+        Отрисовка результата поиска схемы во View.
+
+        Args:
+            regulator_name (str): Наименование регулятора.
+            scheme_name (str): Полное имя файла/схемы.
+            file_path (str): Абсолютный путь к файлу.
+            found (bool): Флаг успешного поиска файла на диске.
         """
         try:
-            summary_label = QtWidgets.QLabel(message)
-            summary_label.setOpenExternalLinks(True)  # ← Ключевая строка!
-            summary_label.setTextFormat(QtCore.Qt.RichText)
-            self.ui.ShemesLayout.addWidget(summary_label)
-            self.ui.ShemesLayout.addStretch()
-            summary_label.setWordWrap(True)
+            # Создаем красивый блок схемы
+            scheme_block = self.create_scheme_block(regulator_name, scheme_name, file_path, found)
+
+            # Находим лайаут. Если там есть распорка (stretch), удаляем её перед добавлением,
+            # чтобы новые элементы всегда были сверху, либо просто добавляем в конец.
+            layout = self.ui.ShemesLayout
+
+            # Добавляем блок в интерфейс
+            layout.addWidget(scheme_block)
+
+            # Чтобы блоки не разъезжались, всегда держим один stretch в самом конце
+            # (если он еще не добавлен)
+            if layout.count() > 0:
+                item = layout.itemAt(layout.count() - 1)
+                if not isinstance(item, QtWidgets.QSpacerItem):
+                    layout.addStretch()
+
+            self.log.debug(f"Блок схемы для {regulator_name} отрисован (found={found})")
+
         except Exception as e:
-            self.log.error("Ошибка при добавлении результата в поле вывода $s", str(e), exc_info=True)
+            self.log.error(f"Ошибка при отрисовке блока схемы для {regulator_name}: {e}", exc_info=True)

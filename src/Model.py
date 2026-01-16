@@ -11,7 +11,18 @@ class Model:
         self.logger = logging.getLogger("App.Model")
         self.logger.info("Модуль модели запустился")
 
+    def validate_engineering_parameters(self, p_in: float, p_out: float, bandwidth: float) -> None:
+        """
+        Инженерная валидация параметров процесса.
+        """
+        if p_in is None or p_out is None or bandwidth is None:
+            raise ValueError("Все параметры (Pвх, Pвых, Расход) должны быть заполнены.")
 
+        if p_in <= 0 or p_out <= 0 or bandwidth <= 0:
+            raise ValueError("Давление и расход должны быть положительными числами.")
+
+        if p_in <= p_out:
+            raise ValueError("Входное давление (Pвх) должно быть строго выше выходного (Pвых).")
 
     def build_scheme_filepath(self, gas_equipment_config: dict,regulator:str) -> str:
         """
@@ -34,7 +45,7 @@ class Model:
         # ВАЖНО: Модель регулятора (например, РДНК-50-400(1000)) должна быть определена
         # в другом месте (после подбора) и сохранена, например, в self.regulator_model_name.
         # regulator_part = "РДНК-50-400(1000)"
-        regulator_part = regulator
+        regulator_part = regulator.replace("/", "").replace("\\", "")
 
         # -----------------------------------------------------------
         # 2.2. Преобразование значений из словаря в кодовые части

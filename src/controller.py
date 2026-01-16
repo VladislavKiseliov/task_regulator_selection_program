@@ -18,7 +18,7 @@ class Controller:
     - обработку ошибок и передачу сообщений в интерфейс.
     """
 
-    def __init__(self, sel_ragulator,callback: CallbackRegistry,excel:ExelMethod,model:Model) -> None:
+    def __init__(self, sel_ragulator:SelRegulator,callback: CallbackRegistry,excel:ExelMethod,model:Model) -> None:
         """
         Инициализирует контроллер.
 
@@ -163,19 +163,22 @@ class Controller:
 
     def __validate_input_parameters(self)-> tuple[float, float, float]:
         """
-            Валидация входных данных для дальнейшего использования
-            Надо дописать исключения в методах получения данных с гуи
+        Сбор данных из GUI и запуск валидации в модели.
         """
         try:
             PIn = self.sel_ragulator.get_pressure("Input")
             POt = self.sel_ragulator.get_pressure("Output")
             bandwidth = self.sel_ragulator.get_bandwidth()
-            return PIn,POt,bandwidth
 
+            # ВАЖНО: Вызов валидации из Модели
+            self.model.validate_engineering_parameters(PIn, POt, bandwidth)
+
+            return PIn, POt, bandwidth
+        except ValueError as e:
+            raise e # Пробрасываем инженерную ошибку выше
         except Exception as e:
-            self.sel_ragulator.show_error_message("Введите корректные значения для поиска регулятора")
-            self.logger.error("Ошибка получения входных параметров: %s", str(e))
-            return
+            self.logger.error("Ошибка получения параметров из GUI: %s", str(e))
+            raise ValueError("Убедитесь, что все поля заполнены корректно.")
 
     def replacement_button_pressed(self) -> None:
         """
@@ -196,17 +199,13 @@ class Controller:
             self.logger.warning("Нет Excel-файлов для обработки")
             return
 
-        # 4. Валидация ВСЕХ входных параметров (общих для всех файлов)
+        # 2. Валидация (Интерфейс + Модель)
         try:
-            min_load, max_load = self.sel_ragulator.get_loading_range() # Получаем диапазон загрузки
-            print(min_load, max_load)
             PIn, POt, bandwidth = self.__validate_input_parameters()
-            print(PIn,POt,bandwidth)
-            self.logger.info("Входные данные получены")
-
+            min_load, max_load = self.sel_ragulator.get_loading_range()
+            load_range = (min_load / 100, max_load / 100) # Переводим в проценты
         except ValueError as e:
             self.sel_ragulator.show_error_message(str(e))
-            self.logger.error("Ошибка валидации входных данных: %s", e)
             return
 
         # 5. Подготовка UI
@@ -226,23 +225,23 @@ class Controller:
                 continue
 
             try:
-                # self.__save_patch_in_conf(path_file)
-                # self.logger.info("Сохранён путь к файлу в конфиг: %s", path_file)
-
                 self.sel_ragulator.show_info_message("Поиск подходящего регулятора запущен")
                 self.logger.info("Открываем Excel-файл: %s", path_file)
+                report = FileWriter(PIn, POt, bandwidth)
+                report.open_file()
 
                 workbook = openpyxl.load_workbook(os.path.normpath(path_file), read_only=True, data_only=True)
 
                 # --- Анализ одного файла ---
                 print(f"Запуск одного фпйла {workbook} {PIn} {POt} {bandwidth}")
-                found:Dict[str,Dict[str,int]] = self.conduct_analysis(workbook, PIn, POt, bandwidth)
+                found:Dict[str,Dict[str,int]] = self.excel.conduct_analysis(workbook, PIn, POt, bandwidth,load_range,reporter=report)
 
                 if len(found) == 0:
                     self.logger.warning("Точное совпадение не найдено в файле %s. Ищем ближайшие значения.", path_file)
                     finder = FoundCorValue(workbook, PIn, POt)
                     PIn_adj, POt_adj = finder()
-                    found = self.conduct_analysis(workbook, PIn_adj, POt_adj, bandwidth)
+                    found = self.excel.conduct_analysis(workbook, PIn_adj, POt_adj, bandwidth,load_range,reporter=report)
+
 
                 total_regulators_found = len(found)
                 self.logger.info("В файле %s найдено %d регуляторов", path_file, len(found))
@@ -251,6 +250,8 @@ class Controller:
                 error_msg = f"Ошибка при обработке файла: {os.path.basename(path_file)}"
                 self.sel_ragulator.show_error_message(error_msg)
                 self.logger.exception("Критическая ошибка при анализе файла %s: %s", path_file,e)
+            finally:
+                report.close_file()
 
         # 8. Финализация
         print("инал поиска")
@@ -264,82 +265,66 @@ class Controller:
         else:
             self.sel_ragulator.show_info_message(f"Найдено {total_regulators_found} подходящих регуляторов.")
 
-    def conduct_analysis(self, workbook: str,
-                         inlet_pressure: float,
-                         output_pressure: float,
-                         traffic_capacity: float) -> int:
-        """Функция conduct_analysis, распарсивает экселевский файл
-        и ищет подходящие ячейки по входным данным.
-        Возвращает колличество найденных девайсов в файле."""
-        self.logger.info("Начинаем анализ Excel-файла: %s", workbook)
-        self.logger.debug("Доступные листы в книге: %s", workbook.sheetnames)
-        print(f"Параметры для поиска  {inlet_pressure} {output_pressure} {traffic_capacity}")
-        regulators_found = {}
-        print(f"{workbook.sheetnames=}")
-
-        for sheet_name in workbook.sheetnames:
-            sheet = workbook[sheet_name]
-            self.logger.debug("Обрабатываем лист: %s", sheet_name)
-            print(f"{sheet=}")
-
-            try:
-                # Проверяем признак типа таблицы в ячейке C1
-                c1_value = sheet["C1"].value
-                self.logger.debug("Значение в C1 на листе %s: %r", sheet_name, c1_value)
-
-                if c1_value is None or c1_value == "":
-                    self.logger.info("Лист %s: обнаружен формат «один регулятор на лист»", sheet_name)
-                    found :Dict[str,Dict[str,int]]= self.excel.search_one_controller_table_algorithm(inlet_pressure, output_pressure, traffic_capacity, sheet)
-                    regulators_found.update(found)
-                    self.logger.debug("На листе %s найдено регуляторов: %d", sheet_name, len(found))
-                else:
-                    self.logger.info("Лист %s: обнаружен формат «несколько регуляторов на лист»", sheet_name)
-                    found:Dict[str,Dict[str,int]] = self.excel.search_several_controller_table_algorithm(inlet_pressure, output_pressure, traffic_capacity, sheet)
-                    regulators_found.update(found)
-                    self.logger.debug("На листе %s найдено регуляторов: %d", sheet_name, len(found))
-
-            except Exception as e:
-                self.logger.error(
-                    "Ошибка при обработке листа %s: %s",
-                    sheet_name, str(e), exc_info=True
-                )
-                continue  # Пропускаем лист при ошибке
-
-        self.logger.info(
-            "Анализ файла %s завершён. Найдено подходящих регуляторов: %d",
-            workbook, len(regulators_found)
-        )
-        return regulators_found
-
-
-
-
     def search_sheme(self):
-        self.sel_ragulator.delete_block_result("ShemesLayout")
-        regulators: List[str]= self.sel_ragulator.get_selected_regulators()
-        print(f"{regulators=}")
-        gas_equipment_config = self.sel_ragulator.select_product_type()
-        print(" Выозов сборщика имени")
-        for regulator in regulators:
-            filename = self.model.build_scheme_filepath(gas_equipment_config,regulator)
-            parse_file_name : dict = self.model.parse_scheme_filename(filename)
-            full_path = self.model.find_scheme_file(parse_file_name)
-            print(f"{full_path=}")
-            if full_path is not None:
-                print("Вставка что нашли")
-                message = (f"<b>Результаты подбора схемы для ргеулятора {regulator}:</b><br>"
-                           f"Схема {parse_file_name["full_name"]}"
-                           f"Полный путь:"
-                           f'<a href="file:///{os.path.abspath(full_path)}">{full_path}</a>')
-                self.sel_ragulator.show_shemas(message)
-            else:
-                print("Вставка что не  нашли")
-                message = (f"<b>Результаты подбора схемы для ргеулятора {regulator}:</b><br>"
-                           f"Схемы {parse_file_name["full_name"]}"
-                           f"Полного пути не сущетсвует")
-                self.sel_ragulator.show_shemas(message)
+        """
+        Метод для поиска и отображения схем выбранных регуляторов.
+        """
+        self.logger.info("Запущен процесс поиска схем")
 
-            #Вывод ошибки
+        # 1. Очистка старых результатов
+        self.sel_ragulator.delete_block_result("ShemesLayout")
+
+        try:
+            # 2. Получение данных из View
+            regulators: List[str] = self.sel_ragulator.get_selected_regulators()
+
+            if not regulators:
+                self.logger.warning("Список регуляторов пуст. Поиск отменен.")
+                self.sel_ragulator.show_info_message("Выберите хотя бы один регулятор из списка результатов.")
+                return
+
+            gas_equipment_config = self.sel_ragulator.select_product_type()
+            self.logger.debug(f"Конфигурация оборудования получена: {gas_equipment_config}")
+
+            # 3. Основной цикл поиска
+            for regulator in regulators:
+                try:
+                    self.logger.info(f"Обработка регулятора: {regulator}")
+
+                    # Формируем имя файла и ищем его через Модель
+                    filename = self.model.build_scheme_filepath(gas_equipment_config, regulator)
+                    parse_data = self.model.parse_scheme_filename(filename)
+                    full_path = self.model.find_scheme_file(parse_data)
+
+                    if full_path:
+                        self.logger.info(f"Схема найдена: {full_path}")
+                        # Передаем во View только данные, а не HTML-строку!
+                        self.sel_ragulator.show_shemas(
+                            regulator_name=regulator,
+                            scheme_name=parse_data.get("full_name", "Неизвестно"),
+                            file_path=os.path.abspath(full_path),
+                            found=True
+                        )
+                    else:
+                        self.logger.warning(f"Файл схемы для {regulator} не найден на диске")
+                        self.sel_ragulator.show_shemas(
+                            regulator_name=regulator,
+                            scheme_name=parse_data.get("full_name", "Неизвестно"),
+                            file_path=None,
+                            found=False
+                        )
+
+                except Exception as e:
+                    # Логируем ошибку конкретного регулятора, чтобы цикл не прервался
+                    self.logger.error(f"Ошибка при обработке регулятора {regulator}: {e}", exc_info=True)
+                    self.sel_ragulator.show_error(f"Ошибка при поиске схемы для {regulator}")
+
+        except Exception as e:
+            # Критическая ошибка (например, сбой получения списка или конфигурации)
+            self.logger.critical(f"Критическая ошибка в методе search_sheme: {e}", exc_info=True)
+            self.sel_ragulator.show_error("Произошла системная ошибка при подборе схем")
+
+        self.logger.info("Поиск схем завершен")
 
 
 if __name__ == "__main__":
@@ -372,77 +357,3 @@ if __name__ == "__main__":
 
 
 
-
-
-
-
-    def select_product_type(self) -> None:
-        """
-        Метод для обработки выбора типа изделия (ГРПБ, ГРПШ, ГРУ).
-        Собирает данные о выбранном типе изделия и сохраняет их.
-        """
-        print(1)
-        # # Получаем выбранный тип изделия из комбо-бокса
-        selected_product = self.ui.comboBox_product_type.currentText()
-        # #
-        # # # Сохраняем информацию о выбранном типе изделия
-        self.selected_product_type = selected_product
-        #
-        # # Собираем дополнительную информацию о конфигурации газового оборудования
-        gas_equipment_config = {
-            "Тип изделия": selected_product,
-            "Количество рабочих линий": self.get_count_work_line(),
-            "Количество резервных линий": self.get_backup_lines(),
-            "Наличие съемной резервной линии": self.get_removable_backup_line(),
-            "Исполнение по СТО ГПРГ": self.get_sto_gprg_execution(),
-            "Обогрев": self.get_heating_type(),
-            "Телеметрия": self.get_telemetry_type(),
-            "Климатическое исполнение": self.get_climate_execution(),
-            "Оснащение УИРГ": self.get_uirg_equipment_type(),
-            "Количество выходов газопроводов": self.get_number_of_gas_pipeline_outlets(),
-            "Диаметр запорной арматуры на входе": self.get_valve_diameter("Input"),
-            "Диаметр запорной арматуры на выходе": self.get_valve_diameter("Output"),
-            "Направление": self.get_direction_type()
-        }
-
-        # # Сохраняем всю конфигурацию
-        self.gas_equipment_config = gas_equipment_config
-        #
-        # # Выводим сообщение в строке состояния
-        # self.ui.statusbar.showMessage(f"Выбран тип изделия: {selected_product}", 3000)
-
-        print(f"{gas_equipment_config=}")
-        self.search_file_name()
-
-        # Здесь можно добавить дополнительную логику обработки выбранного типа изделия
-        # Например, изменение интерфейса в зависимости от выбранного типа
-
-    # def search_file_name(self):
-    #
-    #
-    #
-    #
-    #     # 1. Объединение частей пути с помощью оператора /
-    #     # Python сам поставит нужный разделитель: '\' для Windows или '/' для Linux/Mac.
-    #     folder = "Каталог"
-    #     sub_folder = selected_product
-    #     sub_sub_folder = regulator
-    #     file_name = stri + ".cdw"
-    #
-    #     file_path = Path(folder) / sub_folder /sub_sub_folder/ file_name
-    #
-    #     print(f"Путь: {file_path}")
-    #
-    #     # 2. Объединение с текущим рабочим каталогом
-    #     full_path = Path.cwd() / file_path
-    #     print(f"Полный путь: {full_path}")
-    #
-    #     current_text = self.ui.plainTextEdit_2.toPlainText()
-    #     new_text = current_text + "\n" + self.__split_and_insert_newline(str(full_path))
-    #     self.ui.plainTextEdit_2.setPlainText(new_text)
-    #     if full_path.exists():
-    #
-    #         print(f"Путь существует: {full_path}")
-    #
-    #     else:
-    #         print(f"Путь не существует: {full_path}")
