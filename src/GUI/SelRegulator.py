@@ -498,41 +498,6 @@ class SelRegulator:
         except:
             pass
 
-    def __add_load_save_path(self):
-        #Добавляем полученные пути в лайibel для путей если они доступны
-        for file in self.file_path_list:
-            if os.path.exists(file):
-                self.lb.insert(tk.END, file) 
-
-    def __save_patch_in_conf(self, patch:str) -> None:
-        try:
-            """Сохраняем путь в файл конфигурации"""
-            if patch not in self.file_path_list:
-                self.file_path_list.append(patch)   
-
-            # Проверка существования папки и создание, если не существует
-            if not os.path.exists(self.conf_file_path):
-                open(self.conf_file_path, 'w').close()
-                return
-            else:
-                #with open(self.conf_file_path, 'r') as file:
-                #    self.data_conf = json.load(file)
-                #    file.close()
-
-                #for _,value in self.data_conf["Path"].items():
-                #   if value not in self.file_path_list:
-                #       self.file_path_list.append(value)
-
-                with open(self.conf_file_path, 'w') as file:
-                    for elem in self.file_path_list:
-                        self.data_conf["Path"][utils.calculate_hash(elem)] = elem
-                    
-                    json.dump(self.data_conf, file)
-
-                    file.close()
-        except:
-            pass
-
     def show_error_message(self, text_err:str) -> None:
         """Функция show_error_message выводит сообщение об ошибке с заданным текстом
         в виде диалогового окна."""
@@ -569,35 +534,6 @@ class SelRegulator:
         msg.setStandardButtons(QMessageBox.Ok)
         msg.exec_()
 
-    def remove_button_pressed(self) -> None:
-        """Функция для обработки нажатия кнопки <Удалить>""" 
-        selected_index = self.lb.curselection()
-
-        value = self.lb.get(selected_index)
-
-        try:
-            keys_to_remove = []
-            dict_data = self.data_conf["Path"]
-
-            for key, val in dict_data.items():
-                if val == value:
-                    
-                    keys_to_remove.append(key)
-
-            for key in keys_to_remove:
-                del dict_data[key]
-
-            self.file_path_list.remove(value)
-        except:
-            pass
-
-        if selected_index:
-            self.lb.delete(selected_index)
-
-    def folder_save_open(self) -> None:
-        """Функция для обработки нажатия кнопки <Удалить>""" 
-        subprocess.Popen(f'explorer "{os.path.normpath(self.folder_path)}"')
-
     def status_work_cycle(self) -> None:
         """Функция status_work_cycle обновляет статус работы в статус-баре.
         Если статус содержит текст 'В работе', функция обновляет статус-бар и
@@ -620,26 +556,6 @@ class SelRegulator:
         self.status_text = status_text
         self.status_work_cycle()
 
-    def possible_copy(self, path_file:str, worck_patch:str) -> bool:
-        """
-        Проверяет возможность копирования файла из одного пути в другой. 
-            И копирует его если это возможно.
-
-        Args:
-            path_file (str): Путь к исходному файлу.
-            worck_patch (str): Путь к целевому файлу.
-
-        Returns:
-            bool: Возвращает True, если копирование прошло успешно. 
-            В противном случае выводит сообщение об ошибке и возвращает False.
-        """
-        try:
-            shutil.copyfile(path_file.lstrip(), worck_patch.lstrip())
-            return True
-        except PermissionError:
-            self.show_error_message("Недоступно чтение исходного файла!")
-            return False
-
     def __open_file_dialog(self):
         """Функция __open_file_dialog, отвечает
         за загрузку файла через контекстный
@@ -650,17 +566,6 @@ class SelRegulator:
         file_path, _ = QFileDialog.getOpenFileName(self.ui.centralwidget, "Выберите файл", "", file_filter, options=options)
         if file_path:
             self.drop_area.add_file(file_path)
-
-    def __file_placed_drop_zone(self, e:str) -> None:
-        """Функция __file_placed_drop_zone, отвечает
-        за добавление и форматировании пути файла
-        в дроп зону при его перетаскивании туда"""
-        list_path = "".join(e.data.replace("{", "")).split("}")[:-1]
-        #Вводим пути в дроп бокс с форматированием
-        [self.lb.insert(tk.END, file) for file in list_path]
-        #Показываем пользователю какое название будет у файла
-        # self.input_name_file.delete(0, tk.END)  # Очистка поля ввода
-        # self.input_name_file.insert(0,  os.path.splitext(os.path.basename(list_path[-1]))[0]+"подбор"+".log")  # Вставка текста в поле ввода
 
 
     def __saved_conf_search(self) -> None:
@@ -921,47 +826,6 @@ class SelRegulator:
         except Exception as e:
             self.log.error(f"Ошибка при отрисовке регуляторов: {e}", exc_info=True)
             self.show_error_message("Ошибка при отображении результатов")
-
-    def add_test_regulators(self):
-        try:
-            # Очистка старых блоков
-            while self.ui.regulatorsLayout.count():
-                item = self.ui.regulatorsLayout.takeAt(0)
-                if item.widget():
-                    item.widget().deleteLater()
-
-            # Тестовые данные
-            test_regs = [
-                {"name": "Регулятор РДСК-50", "saddle": "DN50", "inlet": 0.6, "outlet": 0.2, "kv": 120},
-                {"name": "Регулятор РДГ-32", "saddle": "DN32", "inlet": 1.2, "outlet": 0.3, "kv": 85},
-                {"name": "Регулятор РДУ-100", "saddle": "DN100", "inlet": 1.6, "outlet": 0.4, "kv": 210},
-                {"name": "Регулятор РДУ-120", "saddle": "DN120", "inlet": 1.8, "outlet": 0.5, "kv": 220},
-                {"name": "Регулятор РДУ-130", "saddle": "DN130", "inlet": 2.0, "outlet": 0.6, "kv": 230},
-                {"name": "Регулятор РДУ-140", "saddle": "DN140", "inlet": 2.2, "outlet": 0.7, "kv": 240},
-
-            ]
-            # Добавляем заголовок
-            test_summary = QtWidgets.QLabel(
-                "<b>Тестовые результаты:</b><br>"
-                "Pвх: 1.2 МПа | Pвых: 0.3 МПа | Kv: 100 м³/ч"
-            )
-            test_summary.setStyleSheet("padding: 6px; background-color: #e6f7ff; border-radius: 4px;")
-            test_summary.setWordWrap(True)
-            self.ui.regulatorsLayout.addWidget(test_summary)
-
-            for reg in test_regs:
-                block = self.create_regulator_block(
-                    name=reg["name"],
-                    saddle=reg["saddle"],
-                    currentBandwidth=reg["saddle"],
-                    bandwidth=reg["saddle"],
-                )
-                self.ui.regulatorsLayout.addWidget(block)
-
-            # Добавляем растягиватель, чтобы блоки не прилипали к низу
-            self.ui.regulatorsLayout.addStretch()
-        except ValueError as e:
-            print(e)
 
     def get_selected_regulators(self) -> List[str]:
         """

@@ -241,18 +241,10 @@ class Controller:
             self.sel_regulator.show_error_message(str(e))
             return
 
-        # 5. Подготовка UI
-        # self.__clear_widget_res_in_app()
-        # self.update_status_worck("В работе")
-        # self.logger.info("Виджет результатов очищен, статус: 'В работе'")
-
-        # 6. Сохранение конфигурации поиска (если нужно)
-        # self.__saved_conf_search()
-
         # 7. Обработка каждого файла
         print("Шаг 7 ")
         total_regulators_found = 0
-
+        report = FileWriter(PIn, POt, bandwidth)
         for path_file in excel_files:
             if not path_file.strip():  # защита от пустых строк
                 continue
@@ -260,7 +252,7 @@ class Controller:
             try:
                 self.sel_regulator.show_info_message("Поиск подходящего регулятора запущен")
                 self.logger.info("Открываем Excel-файл: %s", path_file)
-                report = FileWriter(PIn, POt, bandwidth)
+
                 report.open_file()
 
                 workbook = openpyxl.load_workbook(os.path.normpath(path_file), read_only=True, data_only=True)
