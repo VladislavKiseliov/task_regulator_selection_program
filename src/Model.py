@@ -179,12 +179,7 @@ class Model:
 
             # Автовыбор скорости по давлению (если включено)
             if auto_speed:
-                if gas_pressure_kpa < 50:
-                    speed = 15.0
-                elif 50 <= gas_pressure_kpa <= 600:
-                    speed = 25.0
-                else:
-                    speed = 30.0
+                speed = self.speed_selection(pressure)
 
             # Проверка скорости
             if speed <= 0:
@@ -208,6 +203,55 @@ class Model:
 
         except Exception as e:
             raise Exception(f"Неизвестная ошибка при расчёте диаметра: {str(e)}")
+
+    def speed_selection(self, gas_pressure):
+        """
+        Выбирает расчетную скорость газа в зависимости от входного давления.
+
+        Логика выбора:
+        - До 50 кПа: 15.0 м/с
+        - От 50 до 600 кПа: 25.0 м/с
+        - Свыше 600 кПа: 30.0 м/с
+
+        Args:
+            gas_pressure_kpa (float/int): Давление газа в килопаскалях.
+
+        Returns:
+            float: Рекомендуемая скорость газа (м/с).
+            Возвращает 0.0, если входные данные некорректны.
+
+        Raises:
+            ValueError: Если давление отрицательное.
+            TypeError: Если передано не число.
+        """
+        gas_pressure_kpa = gas_pressure*1000
+        try:
+            # Проверка типа данных
+            if not isinstance(gas_pressure_kpa, (int, float)):
+                print(f"Давление должно быть числом, получено: {type(gas_pressure_kpa).__name__}")
+                raise TypeError(f"Давление должно быть числом, получено: {type(gas_pressure_kpa).__name__}")
+
+            # Проверка физического смысла (давление не может быть меньше 0)
+            if gas_pressure_kpa < 0:
+                raise ValueError(f"Давление не может быть отрицательным: {gas_pressure_kpa}")
+
+            print("Основная логика выбора скорости")
+            # Основная логика выбора скорости
+            if gas_pressure_kpa < 50:
+                speed = 15.0
+            elif 50 <= gas_pressure_kpa <= 600:
+                speed = 25.0
+            else:
+                speed = 30.0
+
+            return speed
+
+        except (TypeError, ValueError) as e:
+            # Отображаем ошибку через ваш метод вывода ошибок
+            return 0.0
+        except Exception as e:
+            return 0.0
+
 
     def calculate_gas_speed(self, gas_pressure: float, diameter: float, gas_consumption: float ) -> float | None:
         """

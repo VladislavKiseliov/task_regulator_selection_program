@@ -120,27 +120,27 @@ class SelRegulator:
         #Подключение событий изменения текста в полях калькулятора
 
         # При завершении редактирования поля ввода входного давления вызывается make_calculation
-        # self.ui.input_Pressure_Input.editingFinished.connect(self.make_calculation)
+        self.ui.input_Pressure_Input.editingFinished.connect(lambda: self.callback.trigger("auto_calculate_trigger"))
 
         # При завершении редактирования поля ввода скорости газа вызывается make_calculation
-        # self.ui.lineEdit_gas_speed.editingFinished.connect(self.make_calculation)
+        self.ui.lineEdit_gas_speed_Input.editingFinished.connect(lambda: self.callback.trigger("auto_calculate_trigger"))
 
         # При завершении редактирования поля ввода диаметра газопровода вызывается make_calculatio
-        # self.ui.lineEdit_diametet_of_gas_pipeline.editingFinished.connect(self.make_calculation)
+        self.ui.lineEdit_diameter_of_gas_pipeline_Input.editingFinished.connect(lambda: self.callback.trigger("auto_calculate_trigger"))
 
         #Подключение событий изменения текста в полях калькулятора выходного газопровода
 
         # При завершении редактирования поля ввода выходного давления вызывается make_calculation
-        # self.ui.input_Pressure_Output.editingFinished.connect(self.make_calculation)
+        self.ui.input_Pressure_Output.editingFinished.connect(lambda: self.callback.trigger("auto_calculate_trigger"))
 
         # При завершении редактирования поля ввода скорости газа на выходе вызывается make_calculation
-        # self.ui.lineEdit_gas_speed_out.editingFinished.connect(self.make_calculation)
+        self.ui.lineEdit_gas_speed_Output.editingFinished.connect(lambda: self.callback.trigger("auto_calculate_trigger"))
 
         # При завершении редактирования поля ввода диаметра газопровода на выходе вызывается make_calculation
-        # self.ui.lineEdit_diametet_of_gas_pipeline_out.editingFinished.connect(self.make_calculation)
+        self.ui.lineEdit_diameter_of_gas_pipeline_Output.editingFinished.connect(lambda: self.callback.trigger("auto_calculate_trigger"))
 
         # При завершении редактирования поля ввода пропускной способности вызывается make_calculation
-        # self.ui.input_bandwidth.editingFinished.connect(self.make_calculation)
+        self.ui.input_bandwidth.editingFinished.connect(lambda: self.callback.trigger("auto_calculate_trigger"))
 
     def get_count_work_line(self):
         """
@@ -230,9 +230,9 @@ class SelRegulator:
         except Exception as e:
             self.ui.statusbar.showMessage(f"Ошибка: {str(e)}")
 
-    def get_valve_diameter(self,ioType:str)->int:
+    def get_valve_diameter_calc(self,ioType:str)->int:
         """
-                Получить диаметр запорной арматуры  из текстового поля для указанного конца трубопровода.
+                Для получение диаметра которые мы получаем расчетным путем
 
                 Поддерживаемые имена полей: input_Pressure_In, input_Pressure_Out.
 
@@ -258,7 +258,7 @@ class SelRegulator:
             self.show_error(f"Ошибка при чтении диаметра ({ioType}): {e}")
             return 0
 
-    def set_valve_diametr(self,ioType:str,diametr:int)->None:
+    def set_valve_diameter_calc(self,ioType:str,diametr:int)->None:
         """
             Устанавливаем значение диаметра в ячейку
         """
@@ -270,6 +270,50 @@ class SelRegulator:
 
         except Exception as e:
             self.show_error(f"Ошибка при вставке диаметра ({ioType}): {e}")
+
+    def get_valve_diameter_manual(self,ioType:str)->int:
+        """
+            Для получения диаметра, который вводится вручную.
+
+            Поддерживаемые имена полей в UI:
+            label_valve_diameter_Input  , label_valve_diameter_Output.
+
+            Параметры:
+                ioType (str): "Input" — вход, "Output" — выход.
+
+            Возвращает:
+                float: Значение диаметра. При ошибке возвращается 0.0.
+            """
+        if ioType not in ("Input", "Output"):
+            self.show_error("Ошибка программирования: ioType должен быть 'Input' или 'Output'")
+            return 0
+
+        # Формируем имя виджета для ручного ввода
+        widget_name = f"label_valve_diameter_{ioType}"
+
+        try:
+            widget = getattr(self.ui, widget_name)
+            # Очищаем строку от пробелов и заменяем запятую на точку для float
+            text = widget.text().replace(",", ".").strip()
+
+            if not text:
+                # Если поле пустое, можно либо вернуть 0, либо выдать предупреждение
+                return 0
+
+            return int(text)
+
+        except AttributeError:
+            self.show_error(f"Ошибка: Виджет {widget_name} не найден в UI")
+            return 0
+        except ValueError:
+            self.show_error(f"Ошибка: В поле '{ioType}' введено не число")
+            return 0
+        except Exception as e:
+            self.show_error(f"Непредвиденная ошибка ({ioType}): {e}")
+            return 0
+
+    def set_valve_diameter_manual(self,diametr:int)->None:
+        pass
 
     def get_direction_type(self) -> str:
         """
@@ -331,33 +375,25 @@ class SelRegulator:
         except Exception as e:
             self.show_error(f"Ошибка при вставке скорости ({ioType}): {e}")
 
-    def get_speed(self,ioType:str)->int:
-        """
-                Получает значение скорости из текстового поля для указанного конца трубопровода.
-
-                Поддерживаемые имена полей: lineEdit_gas_speed_Input, lineEdit_gas_speed_Output.
-
-                Параметры:
-                    ioType (str): "Input" — вход, "Output" — выход.
-
-                Возвращает:
-                    int: Значение давления. При ошибке возвращается 0 и отображается сообщение.
-
-                Пример:
-                    speed_in = self.get_speed("Input")
-                """
+    def get_speed(self, ioType: str) -> float:  # Изменил возвращаемый тип на float
         if ioType not in ("Input", "Output"):
-            self.show_error("Ошибка: suffix должен быть 'Input' или 'Output'")
-            return 0
+            self.show_error(f"Ошибка: ioType должен быть 'Input' или 'Output', получено '{ioType}'")
+            return 0.0
 
         widget_name = f"lineEdit_gas_speed_{ioType}"
         try:
             widget = getattr(self.ui, widget_name)
-            text = widget.text().replace(",", ".").replace(" ", "")
-            return int(text)
+            text = widget.text().replace(",", ".").strip()
+
+            if not text:
+                return 0.0
+
+            # Сначала переводим во float, так как в строке может быть точка
+            return float(text)
         except Exception as e:
-            self.show_error(f"Ошибка при чтении давления ({ioType}): {e}")
-            return 0
+            # Теперь вы увидите реальную ошибку в консоли, если что-то пойдет не так
+            print(f"DEBUG: Error reading {widget_name}: {e}")
+            return 0.0
 
     def switch_diametr(self) -> None:
         self.speed_or_diametr = "diametr"
@@ -436,7 +472,7 @@ class SelRegulator:
         self.drop_area = DropArea();
         self.ui.scrollArea_2.setWidget(self.drop_area)
 
-    def __conf_file_loader(self) -> None:
+    def  __conf_file_loader(self) -> None:
         """Загружаем json с конфигом, в котором находятся пути сохраённных xmlx файлов"""
         try:
             # Получение текущей директории
@@ -626,50 +662,6 @@ class SelRegulator:
         # self.input_name_file.delete(0, tk.END)  # Очистка поля ввода
         # self.input_name_file.insert(0,  os.path.splitext(os.path.basename(list_path[-1]))[0]+"подбор"+".log")  # Вставка текста в поле ввода
 
-    def __res_file_name(self) -> str:
-        """Функция __res_file_name, собирает название
-        файла логов в который будет записан результат"""
-        if self.saved_conf_self_file_name_var:
-            return self.saved_conf_input_name_file+".txt"
-
-        # Сборка пути к файлу
-        name_file = "Pвх-{0} Pвых-{1} ПрСп-{2}.txt".format(self.get_pressure("Input"),
-                                                    self.get_pressure("Output"),
-                                                    self.get_bandwidth())
-        
-        file_path = os.path.join(self.current_dir, self.folder_save_name, name_file)
-
-        return file_path
-
-    #Взять для основы красивого вывода и удалить
-    def __logging_found_device(self, name_devace:str, saddle:str, found_bandwidth:int, need_bandwidth:int, defolt_bandwidth:str)-> None:
-        """Функция __logging_found_device, добавляет
-        в словарь найденных устройств новые записи
-        об устройствах"""
-        print(f"{saddle=}")
-        for i in saddle.split():
-            if utils.is_int(i):
-                saddle=i
-        
-        #name_devace+="/"+saddle
-
-        # if self.saved_conf_left_to_right:
-        #     name_devace+='-01'
-        #
-        # if self.saved_conf_PZK_position_sensor:
-        #     name_devace+=' Д'
-
-        self.data_found_id+=1
-        self.data_found[self.data_found_id] = {"Регулятор":name_devace,
-                                               "Седло":saddle,
-                                               "Пропускная":found_bandwidth,
-                                               "Необходимая":need_bandwidth,
-                                               "Процент":"{:.2f}".format(100-(((int(found_bandwidth)-int(need_bandwidth))/int(found_bandwidth))*100))}
-
-    def __clear_data_found_device(self) -> None:
-        """очищает списки найденных регуляторов"""
-        self.list_in_range_value = []
-        self.data_found = {}
 
     def __saved_conf_search(self) -> None:
         """Функция __saved_conf_search, сохраняет конфигурацию
@@ -1010,8 +1002,8 @@ class SelRegulator:
         Собирает данные о выбранном типе изделия и сохраняет их.
         """
         #
-        print(f"{self.get_valve_diameter("Input")=}")
-        print(f"{self.get_valve_diameter("Output")=}")
+        # print(f"{self.get_valve_diameter("Input")=}")
+        # print(f"{self.get_valve_diameter("Output")=}")
         # # Собираем дополнительную информацию о конфигурации газового оборудования
         gas_equipment_config = {
             "Тип изделия": self.ui.comboBox_product_type.currentText(),
@@ -1024,8 +1016,8 @@ class SelRegulator:
             "Климатическое исполнение": self.get_climate_execution(),
             "Оснащение УИРГ": self.get_uirg_equipment_type(),
             "Количество выходов газопроводов": self.get_number_of_gas_pipeline_outlets(),
-            "Диаметр запорной арматуры на входе": self.get_valve_diameter("Input"),
-            "Диаметр запорной арматуры на выходе": self.get_valve_diameter("Output"),
+            "Диаметр запорной арматуры на входе": self.get_valve_diameter_manual("Input"),
+            "Диаметр запорной арматуры на выходе": self.get_valve_diameter_manual("Output"),
             "Направление": self.get_direction_type()
         }
 

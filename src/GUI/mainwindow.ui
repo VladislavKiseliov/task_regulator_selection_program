@@ -1157,7 +1157,7 @@
                   <number>10</number>
                  </property>
                  <item>
-                  <widget class="QLabel" name="label_valve_diameter_in">
+                  <widget class="QLabel" name="label_valve_diameter_Input">
                    <property name="font">
                     <font>
                      <pointsize>10</pointsize>
@@ -1196,7 +1196,7 @@
                   <number>10</number>
                  </property>
                  <item>
-                  <widget class="QLabel" name="label_valve_diameter_out">
+                  <widget class="QLabel" name="label_valve_diameter_Output">
                    <property name="font">
                     <font>
                      <pointsize>10</pointsize>

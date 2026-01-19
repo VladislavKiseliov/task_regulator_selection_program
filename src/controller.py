@@ -13,17 +13,17 @@ class Controller:
 
     Отвечает за:
     - выбор сценария расчёта (по диаметру или скорости);
-    - сбор данных из интерфейса (через `sel_ragulator`);
+    - сбор данных из интерфейса (через `sel_regulator`);
     - вызов математических методов;
     - обработку ошибок и передачу сообщений в интерфейс.
     """
 
-    def __init__(self, sel_ragulator:SelRegulator,callback: CallbackRegistry,excel:ExelMethod,model:Model) -> None:
+    def __init__(self, sel_regulator:SelRegulator,callback: CallbackRegistry,excel:ExelMethod,model:Model) -> None:
         """
         Инициализирует контроллер.
 
         Args:
-            sel_ragulator: объект интерфейса/модели, предоставляющий:
+            sel_regulator: объект интерфейса/модели, предоставляющий:
                 - get_pressure(ioType)
                 - get_speed(ioType)
                 - get_diameter(ioType)
@@ -33,7 +33,7 @@ class Controller:
                 - show_error(message)
         """
         print("контролер запущен")
-        self.sel_ragulator = sel_ragulator
+        self.sel_regulator = sel_regulator
         self.logger = logging.getLogger("App.Controller")
         self.logger.info("Главный контроллер запущен")
         self.callback = callback
@@ -47,6 +47,39 @@ class Controller:
         self.callback.register("make_calculation", self.make_calculation)
         self.callback.register("replacement_button_pressed", self.replacement_button_pressed)
         self.callback.register("search_sheme",self.search_sheme)
+        self.callback.register("auto_calculate_trigger",self.auto_calculate_trigger)
+
+    def auto_calculate_trigger(self) -> None:
+        """Проверяет наличие всех данных и запускает расчет без вывода ошибок."""
+        try:
+            # Пробуем получить данные. Если в полях пусто или буквы - get_pressure вернет 0 или выкинет ошибку
+            p_in = self.sel_regulator.get_pressure("Input")
+            print(f"{p_in=}")
+
+            if self.sel_regulator.get_auto_speed_checked("In") and p_in>0:
+                speed = self.model.speed_selection(p_in)
+                print(f"{speed=}")
+                self.sel_regulator.set_speed("Input",speed)
+                print(f"{self.sel_regulator.get_speed("Input")=}")
+            p_out = self.sel_regulator.get_pressure("Output")
+            print(f"{p_out=}")
+
+            if self.sel_regulator.get_auto_speed_checked("Out") and p_out>0:
+                speed = self.model.speed_selection(p_out)
+                print(f"{speed=}")
+                self.sel_regulator.set_speed("Output",speed)
+
+            consumption = self.sel_regulator.get_bandwidth()
+
+            # Если все три значения получены (больше нуля)
+            if p_in > 0 and p_out > 0 and consumption > 0:
+                # Блокируем логирование или уведомления, если нужно, и считаем
+                print("ВЫЗОД РАСЧЕТ")
+                self.make_calculation()
+        except Exception:
+            # Просто игнорируем любые ошибки ввода, пока пользователь печатает
+            pass
+
 
     def make_calculation(self) -> None:
         """
@@ -60,7 +93,7 @@ class Controller:
             `self.speed_or_diametr` должен быть установлен извне до вызова метода.
         """
         print("Начали рассчет")
-        if self.sel_ragulator.speed_or_diametr == "diametr":
+        if self.sel_regulator.speed_or_diametr == "diametr":
             self.logger.info("Запуск расчёта диаметра для входа")
             self.calculated_diameter("Input")
             self.logger.info("Запуск расчёта диаметра для выхода")
@@ -84,9 +117,9 @@ class Controller:
         self.logger.info("Начало расчёта диаметра для %s", io_type)
 
         try:
-            pressure = self.sel_ragulator.get_pressure(io_type)
-            speed = self.sel_ragulator.get_speed(io_type)
-            gas_consumption = self.sel_ragulator.get_bandwidth()
+            pressure = self.sel_regulator.get_pressure(io_type)
+            speed = self.sel_regulator.get_speed(io_type)
+            gas_consumption = self.sel_regulator.get_bandwidth()
             auto_speed = False
 
             # Безопасное логирование: используем %r для потенциально None-значений
@@ -105,18 +138,18 @@ class Controller:
 
             if calculated_diameter is not None:
                 self.logger.info("Полученный диаметр для %s: %.2f мм", io_type, calculated_diameter)
-                self.sel_ragulator.set_valve_diametr(io_type, calculated_diameter)
+                self.sel_regulator.set_valve_diameter_calc(io_type, calculated_diameter)
             else:
                 self.logger.warning("Расчёт диаметра для %s не удался", io_type)
 
         except ValueError as e:
             self.logger.exception(e)
-            self.sel_ragulator.show_error(e)
+            self.sel_regulator.show_error(e)
 
         except Exception as e:
             msg = f"Ошибка при расчёте диаметра для {io_type}: {str(e)}"
             self.logger.exception(msg)
-            self.sel_ragulator.show_error(msg)
+            self.sel_regulator.show_error(msg)
 
     def calculate_speed(self, io_type: str) -> None:
         """
@@ -131,9 +164,9 @@ class Controller:
         self.logger.info("Начало расчёта скорости для трубы %s", io_type)
 
         try:
-            pressure = self.sel_ragulator.get_pressure(io_type)
-            diameter = self.sel_ragulator.get_valve_diameter(io_type)
-            gas_consumption = self.sel_ragulator.get_bandwidth()
+            pressure = self.sel_regulator.get_pressure(io_type)
+            diameter = self.sel_regulator.get_valve_diameter_calc(io_type)
+            gas_consumption = self.sel_regulator.get_bandwidth()
 
             self.logger.debug(
                 "Параметры для расчёта скорости (%s): "
@@ -149,26 +182,26 @@ class Controller:
 
             if calculated_speed is not None:
                 self.logger.info("Полученная скорость для %s: %.2f м/с", io_type, calculated_speed)
-                self.sel_ragulator.set_speed(io_type, calculated_speed)
+                self.sel_regulator.set_speed(io_type, calculated_speed)
             else:
                 self.logger.warning("Расчёт скорости для %s не удался", io_type)
 
         except ValueError as e:
             self.logger.exception(e)
-            self.sel_ragulator.show_error(e)
+            self.sel_regulator.show_error(e)
         except Exception as e:
             msg = f"Ошибка при расчёте скорости для {io_type}: {str(e)}"
             self.logger.exception(msg)
-            self.sel_ragulator.show_error(msg)
+            self.sel_regulator.show_error(msg)
 
     def __validate_input_parameters(self)-> tuple[float, float, float]:
         """
         Сбор данных из GUI и запуск валидации в модели.
         """
         try:
-            PIn = self.sel_ragulator.get_pressure("Input")
-            POt = self.sel_ragulator.get_pressure("Output")
-            bandwidth = self.sel_ragulator.get_bandwidth()
+            PIn = self.sel_regulator.get_pressure("Input")
+            POt = self.sel_regulator.get_pressure("Output")
+            bandwidth = self.sel_regulator.get_bandwidth()
 
             # ВАЖНО: Вызов валидации из Модели
             self.model.validate_engineering_parameters(PIn, POt, bandwidth)
@@ -187,7 +220,7 @@ class Controller:
         self.logger.info("Начинаем подбор регулятора")
 
         # 1. Получение и логирование путей
-        file_paths = self.sel_ragulator.drop_area.get_file_paths()
+        file_paths = self.sel_regulator.drop_area.get_file_paths()
         self.logger.info("Получили список файлов из drop_area: %s", file_paths)
 
         # 3. Фильтрация Excel-файлов
@@ -195,17 +228,17 @@ class Controller:
         self.logger.info("Отфильтрованы Excel-файлы: %s", excel_files)
 
         if not excel_files:
-            self.sel_ragulator.show_error_message("Добавьте файлы с расширением .xlsx")
+            self.sel_regulator.show_error_message("Добавьте файлы с расширением .xlsx")
             self.logger.warning("Нет Excel-файлов для обработки")
             return
 
         # 2. Валидация (Интерфейс + Модель)
         try:
             PIn, POt, bandwidth = self.__validate_input_parameters()
-            min_load, max_load = self.sel_ragulator.get_loading_range()
+            min_load, max_load = self.sel_regulator.get_loading_range()
             load_range = (min_load / 100, max_load / 100) # Переводим в проценты
         except ValueError as e:
-            self.sel_ragulator.show_error_message(str(e))
+            self.sel_regulator.show_error_message(str(e))
             return
 
         # 5. Подготовка UI
@@ -225,7 +258,7 @@ class Controller:
                 continue
 
             try:
-                self.sel_ragulator.show_info_message("Поиск подходящего регулятора запущен")
+                self.sel_regulator.show_info_message("Поиск подходящего регулятора запущен")
                 self.logger.info("Открываем Excel-файл: %s", path_file)
                 report = FileWriter(PIn, POt, bandwidth)
                 report.open_file()
@@ -248,22 +281,22 @@ class Controller:
 
             except Exception as e:
                 error_msg = f"Ошибка при обработке файла: {os.path.basename(path_file)}"
-                self.sel_ragulator.show_error_message(error_msg)
+                self.sel_regulator.show_error_message(error_msg)
                 self.logger.exception("Критическая ошибка при анализе файла %s: %s", path_file,e)
             finally:
                 report.close_file()
 
         # 8. Финализация
         print("инал поиска")
-        self.sel_ragulator.show_found_regulators(found)
-        self.sel_ragulator.update_status_worck("Ожидание работы")
+        self.sel_regulator.show_found_regulators(found)
+        self.sel_regulator.update_status_worck("Ожидание работы")
         self.logger.info("Подбор завершён. Всего найдено регуляторов: %d", total_regulators_found)
 
         # Опционально: показать итоговое сообщение
         if total_regulators_found == 0:
-            self.sel_ragulator.show_info_message("Подходящие регуляторы не найдены.")
+            self.sel_regulator.show_info_message("Подходящие регуляторы не найдены.")
         else:
-            self.sel_ragulator.show_info_message(f"Найдено {total_regulators_found} подходящих регуляторов.")
+            self.sel_regulator.show_info_message(f"Найдено {total_regulators_found} подходящих регуляторов.")
 
     def search_sheme(self):
         """
@@ -272,18 +305,18 @@ class Controller:
         self.logger.info("Запущен процесс поиска схем")
 
         # 1. Очистка старых результатов
-        self.sel_ragulator.delete_block_result("ShemesLayout")
+        self.sel_regulator.delete_block_result("ShemesLayout")
 
         try:
             # 2. Получение данных из View
-            regulators: List[str] = self.sel_ragulator.get_selected_regulators()
+            regulators: List[str] = self.sel_regulator.get_selected_regulators()
 
             if not regulators:
                 self.logger.warning("Список регуляторов пуст. Поиск отменен.")
-                self.sel_ragulator.show_info_message("Выберите хотя бы один регулятор из списка результатов.")
+                self.sel_regulator.show_info_message("Выберите хотя бы один регулятор из списка результатов.")
                 return
 
-            gas_equipment_config = self.sel_ragulator.select_product_type()
+            gas_equipment_config = self.sel_regulator.select_product_type()
             self.logger.debug(f"Конфигурация оборудования получена: {gas_equipment_config}")
 
             # 3. Основной цикл поиска
@@ -299,7 +332,7 @@ class Controller:
                     if full_path:
                         self.logger.info(f"Схема найдена: {full_path}")
                         # Передаем во View только данные, а не HTML-строку!
-                        self.sel_ragulator.show_shemas(
+                        self.sel_regulator.show_shemas(
                             regulator_name=regulator,
                             scheme_name=parse_data.get("full_name", "Неизвестно"),
                             file_path=os.path.abspath(full_path),
@@ -307,7 +340,7 @@ class Controller:
                         )
                     else:
                         self.logger.warning(f"Файл схемы для {regulator} не найден на диске")
-                        self.sel_ragulator.show_shemas(
+                        self.sel_regulator.show_shemas(
                             regulator_name=regulator,
                             scheme_name=parse_data.get("full_name", "Неизвестно"),
                             file_path=None,
@@ -317,12 +350,12 @@ class Controller:
                 except Exception as e:
                     # Логируем ошибку конкретного регулятора, чтобы цикл не прервался
                     self.logger.error(f"Ошибка при обработке регулятора {regulator}: {e}", exc_info=True)
-                    self.sel_ragulator.show_error(f"Ошибка при поиске схемы для {regulator}")
+                    self.sel_regulator.show_error(f"Ошибка при поиске схемы для {regulator}")
 
         except Exception as e:
             # Критическая ошибка (например, сбой получения списка или конфигурации)
             self.logger.critical(f"Критическая ошибка в методе search_sheme: {e}", exc_info=True)
-            self.sel_ragulator.show_error("Произошла системная ошибка при подборе схем")
+            self.sel_regulator.show_error("Произошла системная ошибка при подборе схем")
 
         self.logger.info("Поиск схем завершен")
 
