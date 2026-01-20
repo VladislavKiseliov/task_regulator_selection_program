@@ -62,7 +62,8 @@ class SelRegulator:
             # Удаляем строку с self.app!
             self.MainWindow.setWindowIcon(QIcon('icon.ico'))  # Только для окна
         except Exception as e:
-            print(f"Не удалось установить иконку: {e}")  # Лучше выводить ошибку
+            # Логируем ошибку установки иконки
+            self.log.warning(f"Не удалось установить иконку: {e}")
 
         self.action_menu_2 = QAction("Помощь", self.MainWindow)
         # Добавляем этот QAction на QMenuBar
@@ -391,8 +392,8 @@ class SelRegulator:
             # Сначала переводим во float, так как в строке может быть точка
             return float(text)
         except Exception as e:
-            # Теперь вы увидите реальную ошибку в консоли, если что-то пойдет не так
-            print(f"DEBUG: Error reading {widget_name}: {e}")
+            # Логируем ошибку чтения виджета
+            self.log.debug(f"DEBUG: Error reading {widget_name}: {e}")
             return 0.0
 
     def switch_diametr(self) -> None:
@@ -865,10 +866,7 @@ class SelRegulator:
         Метод для обработки выбора типа изделия (ГРПБ, ГРПШ, ГРУ).
         Собирает данные о выбранном типе изделия и сохраняет их.
         """
-        #
-        # print(f"{self.get_valve_diameter("Input")=}")
-        # print(f"{self.get_valve_diameter("Output")=}")
-        # # Собираем дополнительную информацию о конфигурации газового оборудования
+        # Собираем дополнительную информацию о конфигурации газового оборудования
         gas_equipment_config = {
             "Тип изделия": self.ui.comboBox_product_type.currentText(),
             "Количество рабочих линий": self.get_count_work_line(),
@@ -884,11 +882,8 @@ class SelRegulator:
             "Диаметр запорной арматуры на выходе": self.get_valve_diameter_manual("Output"),
             "Направление": self.get_direction_type()
         }
-
-        # # Выводим сообщение в строке состояния
-        # self.ui.statusbar.showMessage(f"Выбран тип изделия: {selected_product}", 3000)
-
-        print(f"{gas_equipment_config=}")
+        
+        # Логируем конфигурацию оборудования
         return gas_equipment_config
 
     def delete_block_result(self,layout_name:str) -> None:

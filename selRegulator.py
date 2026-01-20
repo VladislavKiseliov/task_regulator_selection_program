@@ -137,5 +137,6 @@ if __name__ == "__main__":
         sys.exit(app.exec_())
 
     except Exception as e:
-        print(f"Ошибка: {e}")
+        # Логируем ошибку
+        logger.error(f"Критическая ошибка: {e}")
         sys.exit(1)

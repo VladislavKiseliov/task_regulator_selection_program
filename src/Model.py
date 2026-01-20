@@ -109,7 +109,7 @@ class Model:
     def parse_scheme_filename(self, filename: str) -> dict:
         """Парсит имя файла и возвращает структуру."""
         parts = filename.split("_")
-        print(f"{parts=}")
+        # Парсинг имени файла
         if len(parts) < 11:
             raise ValueError("Некорректный формат имени файла")
 
@@ -129,20 +129,18 @@ class Model:
         file_name = parse_file_name["full_name"] + ".cdw"
 
         file_path = Path(folder) / sub_folder / sub_sub_folder / file_name
-
-        print(f"Путь: {file_path}")
+        # Формирование пути к файлу
 
         # 2. Объединение с текущим рабочим каталогом
         full_path = Path.cwd() / file_path
-        print(f"Полный путь: {full_path}")
+        # Полный путь к файлу
 
         if full_path.exists():
-
-            print(f"Путь существует: {full_path}")
+            # Путь существует
             return full_path
 
         else:
-            print(f"Путь не существует: {full_path}")
+            # Путь не существует
             return None
 
     def calculate_tube_diameter(
@@ -228,14 +226,15 @@ class Model:
         try:
             # Проверка типа данных
             if not isinstance(gas_pressure_kpa, (int, float)):
-                print(f"Давление должно быть числом, получено: {type(gas_pressure_kpa).__name__}")
+                self.logger.warning(f"Давление должно быть числом, получено: {type(gas_pressure_kpa).__name__}")
                 raise TypeError(f"Давление должно быть числом, получено: {type(gas_pressure_kpa).__name__}")
 
             # Проверка физического смысла (давление не может быть меньше 0)
             if gas_pressure_kpa < 0:
                 raise ValueError(f"Давление не может быть отрицательным: {gas_pressure_kpa}")
 
-            print("Основная логика выбора скорости")
+            # Основная логика выбора скорости
+            self.logger.debug("Основная логика выбора скорости")
             # Основная логика выбора скорости
             if gas_pressure_kpa < 50:
                 speed = 15.0

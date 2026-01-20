@@ -103,7 +103,7 @@ class ExelMethod:
                                             if utils.is_int(row_scr[i_cell]):
                                                 # Проверяем, найденная пропускная способность больше ли необходимой, и является ли регулятор для сжиженного газа если необходимо
                                                 if (int(row_scr[i_cell])*load_range[0]) <= bandwidth <= (int(row_scr[i_cell])*load_range[1]):
-                                                    print(f"Проверка условий на загрузку {(int(row_scr[i_cell])*load_range[0])} <={bandwidth=} <={(int(row_scr[i_cell])*load_range[1])} ")
+                                                # Проверка условий загрузки
                                                     regulators_found[name_device] = {"saddle": saddle,"currentBandwidth":row_scr[i_cell],"bandwidth":bandwidth}
 
                                     # Если ячейка входного давления НЕ является диапазоном
@@ -113,7 +113,7 @@ class ExelMethod:
                                             # Проверяем можем ли мы перевести значение пропускной способности в число
                                             if utils.is_int(row_scr[i_cell]):
                                                 if (int(row_scr[i_cell])*load_range[0]) <= bandwidth <= (int(row_scr[i_cell])*load_range[1]):
-                                                    print(f"Проверка условий на загрузку {(int(row_scr[i_cell]) * load_range[0])} <={bandwidth=} <={(int(row_scr[i_cell]) * load_range[1])} ")
+                                                # Проверка условий загрузки
                                                     regulators_found[name_device] = {"saddle": saddle,"currentBandwidth": row_scr[i_cell],"bandwidth":bandwidth}
 
                                 row_scr_i += 1
@@ -133,7 +133,7 @@ class ExelMethod:
                                             # Проверяем можем ли мы перевести значение пропускной способности в число
                                             if utils.is_int(row_scr[i_cell]):
                                                 if (int(row_scr[i_cell])*load_range[0]) <= bandwidth <= (int(row_scr[i_cell])*load_range[1]):
-                                                    print(f"Проверка условий на загрузку {(int(row_scr[i_cell]) * load_range[0])} <={bandwidth=} <={(int(row_scr[i_cell]) * load_range[1])} ")
+                                                # Проверка условий загрузки
                                                     regulators_found[name_device] = {"saddle": saddle,"currentBandwidth": row_scr[i_cell],"bandwidth":bandwidth}
 
                                     # Если ячейка входного давления НЕ является диапазоном
@@ -144,13 +144,12 @@ class ExelMethod:
                                             if utils.is_int(row_scr[i_cell]):
                                                 # Если это значение больше или равно необходимого
                                                 if (int(row_scr[i_cell])*load_range[0]) <= bandwidth <= (int(row_scr[i_cell])*load_range[1]):
-                                                    print(
-                                                        f"Проверка условий на загрузку {(int(row_scr[i_cell]) * load_range[0])} <={bandwidth=} <={(int(row_scr[i_cell]) * load_range[1])} ")
+                                                # Проверка условий загрузки
                                                     regulators_found[name_device] = {"saddle": saddle,"currentBandwidth": row_scr[i_cell],"bandwidth":bandwidth}
 
                                 row_scr_i += 1
             i_row += 1
-        print(f"search one contoller table algoritm {regulators_found=}")
+        # Результат поиска
         return regulators_found
 
     def search_several_controller_table_algorithm(self,
@@ -199,7 +198,7 @@ class ExelMethod:
 
                                                 bandwidth = int(traffic_capacity)
                                                 # Проверяем можем ли мы перевести значение пропускной способности в число
-                                                print(f"{row_scr[i_cell]}")
+                                                # Значение ячейки
                                                 if utils.is_int(row_scr[i_cell]):
 
                                                     # Проверяем, найденная пропускная способность больше ли необходимой, и является ли регулятор для сжиженного газа если необходимо
@@ -226,13 +225,12 @@ class ExelMethod:
                                         else:
                                             if float(mb_diap_Pain[0]) == float(inlet_pressure):
                                                 bandwidth = int(traffic_capacity)
-                                                print(f"{row_scr[i_cell]}, {bandwidth}")
+                                                # Значения для проверки
                                                 # Проверяем можем ли мы перевести значение пропускной способности в
                                                 test = row_scr[i_cell]
-                                                print(f"{test=},{utils.is_int(row_scr[i_cell])=}")
+                                                # Тестовые значения
                                                 if utils.is_int(row_scr[i_cell]):
-                                                    print(
-                                                        f"Проверка условий на загрузку {(int(row_scr[i_cell]) * load_range[0])} <={bandwidth=} <={(int(row_scr[i_cell]) * load_range[1])} ")
+                                                # Проверка условий загрузки
                                                     if (int(row_scr[i_cell]) * load_range[0]) <= bandwidth <= (
                                                             int(row_scr[i_cell]) * load_range[1]):
                                                         status_str = "ПОДХОДИТ"
@@ -313,8 +311,8 @@ class ExelMethod:
                                     row_scr_i += 1
                 i_row += 1
         except ValueError as e:
-            print(e)
-        print(f"{regulators_found=}")
+            self.logger.error(f"Ошибка значения: {e}")
+        # Результат поиска
         return regulators_found
 
     def conduct_analysis(self, workbook, inlet_pressure, output_pressure, traffic_capacity, load_range,reporter=None) -> Dict[

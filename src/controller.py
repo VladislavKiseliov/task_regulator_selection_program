@@ -32,7 +32,7 @@ class Controller:
                 - set_speed(ioType, value)
                 - show_error(message)
         """
-        print("контролер запущен")
+        # Контроллер запущен
         self.sel_regulator = sel_regulator
         self.logger = logging.getLogger("App.Controller")
         self.logger.info("Главный контроллер запущен")
@@ -43,7 +43,7 @@ class Controller:
 
     def _register_callbacks(self):
         """Register all application callbacks with the callback registry."""
-        print("Зарегестрировали функцию")
+        # Функции зарегистрированы
         self.callback.register("make_calculation", self.make_calculation)
         self.callback.register("replacement_button_pressed", self.replacement_button_pressed)
         self.callback.register("search_sheme",self.search_sheme)
@@ -54,19 +54,19 @@ class Controller:
         try:
             # Пробуем получить данные. Если в полях пусто или буквы - get_pressure вернет 0 или выкинет ошибку
             p_in = self.sel_regulator.get_pressure("Input")
-            print(f"{p_in=}")
+            # Получено входное давление
 
             if self.sel_regulator.get_auto_speed_checked("In") and p_in>0:
                 speed = self.model.speed_selection(p_in)
-                print(f"{speed=}")
+                # Получена скорость
                 self.sel_regulator.set_speed("Input",speed)
-                print(f"{self.sel_regulator.get_speed("Input")=}")
+                # Скорость установлена
             p_out = self.sel_regulator.get_pressure("Output")
-            print(f"{p_out=}")
+            # Получено выходное давление
 
             if self.sel_regulator.get_auto_speed_checked("Out") and p_out>0:
                 speed = self.model.speed_selection(p_out)
-                print(f"{speed=}")
+                # Получена скорость
                 self.sel_regulator.set_speed("Output",speed)
 
             consumption = self.sel_regulator.get_bandwidth()
@@ -74,7 +74,7 @@ class Controller:
             # Если все три значения получены (больше нуля)
             if p_in > 0 and p_out > 0 and consumption > 0:
                 # Блокируем логирование или уведомления, если нужно, и считаем
-                print("ВЫЗОД РАСЧЕТ")
+                # Запуск расчета
                 self.make_calculation()
         except Exception:
             # Просто игнорируем любые ошибки ввода, пока пользователь печатает
@@ -92,14 +92,14 @@ class Controller:
         Примечание:
             `self.speed_or_diametr` должен быть установлен извне до вызова метода.
         """
-        print("Начали рассчет")
+        # Начало расчета
         if self.sel_regulator.speed_or_diametr == "diametr":
             self.logger.info("Запуск расчёта диаметра для входа")
             self.calculated_diameter("Input")
             self.logger.info("Запуск расчёта диаметра для выхода")
             self.calculated_diameter("Output")
         else:
-            print("Начали рассчет скорости ")
+            # Начало расчета скорости
             self.logger.info("Запуск расчёта скорости газа")
             self.calculate_speed("Input")
             self.calculate_speed("Output")
@@ -113,7 +113,7 @@ class Controller:
         Args:
             io_type: "Input" или "Output" — направление потока.
         """
-        print("Собираем данные для расчета диаметра")
+        # Сбор данных для расчета диаметра
         self.logger.info("Начало расчёта диаметра для %s", io_type)
 
         try:
@@ -242,7 +242,7 @@ class Controller:
             return
 
         # 7. Обработка каждого файла
-        print("Шаг 7 ")
+        # Обработка файлов
         total_regulators_found = 0
         report = FileWriter(PIn, POt, bandwidth)
         for path_file in excel_files:
@@ -258,7 +258,7 @@ class Controller:
                 workbook = openpyxl.load_workbook(os.path.normpath(path_file), read_only=True, data_only=True)
 
                 # --- Анализ одного файла ---
-                print(f"Запуск одного фпйла {workbook} {PIn} {POt} {bandwidth}")
+                # Анализ файла
                 found:Dict[str,Dict[str,int]] = self.excel.conduct_analysis(workbook, PIn, POt, bandwidth,load_range,reporter=report)
 
                 if len(found) == 0:
@@ -279,7 +279,7 @@ class Controller:
                 report.close_file()
 
         # 8. Финализация
-        print("инал поиска")
+        # Поиск завершен
         self.sel_regulator.show_found_regulators(found)
         self.sel_regulator.update_status_worck("Ожидание работы")
         self.logger.info("Подбор завершён. Всего найдено регуляторов: %d", total_regulators_found)

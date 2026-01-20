@@ -32,9 +32,12 @@ def create_log_file():
     try:
         with open(filename, "x",encoding="utf-8") as f:  # Режим 'x' создает файл, если его нет
             f.write(f"Программа запущена: {current_time}\n")
-        print(f"Файл '{filename}' создан.")
+        # Файл создан
+        logger.info(f"Файл '{filename}' создан.")
     except FileExistsError:
-        print(f"Файл '{filename}' уже существует.")
+        # Файл уже существует
+        logger.info(f"Файл '{filename}' уже существует.")
     except Exception as e:
-        print(f"Ошибка создания файла: {e}")
+        # Ошибка создания файла
+        logger.error(f"Ошибка создания файла: {e}")
     return filename
