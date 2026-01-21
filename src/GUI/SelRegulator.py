@@ -44,8 +44,6 @@ class SelRegulator:
         self.status_animation = itertools.cycle(["В работе.", "В работе..", "В работе..."])
 
 
-        utils.create_path_folder_for_save()
-
         # self.app = QtWidgets.QApplication(sys.argv)
         
         self.MainWindow = QtWidgets.QMainWindow()
@@ -292,8 +290,7 @@ class SelRegulator:
             return 0
 
         # Формируем имя виджета для ручного ввода
-        widget_name = f"label_valve_diameter_{ioType}"
-
+        widget_name = f"lineEdit_valve_diameter_{ioType}"
         try:
             widget = getattr(self.ui, widget_name)
             # Очищаем строку от пробелов и заменяем запятую на точку для float
@@ -302,7 +299,6 @@ class SelRegulator:
             if not text:
                 # Если поле пустое, можно либо вернуть 0, либо выдать предупреждение
                 return 0
-
             return int(text)
 
         except AttributeError:
