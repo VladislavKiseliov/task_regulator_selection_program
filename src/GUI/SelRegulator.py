@@ -44,8 +44,6 @@ class SelRegulator:
         self.status_animation = itertools.cycle(["В работе.", "В работе..", "В работе..."])
 
 
-        utils.create_path_folder_for_save()
-
         # self.app = QtWidgets.QApplication(sys.argv)
         
         self.MainWindow = QtWidgets.QMainWindow()
