@@ -1,7 +1,10 @@
 from typing import List
 
+from src.FoundCorValue import FoundCorValue
 from src.GUI.SelRegulator import *
 import logging
+
+from src.MyLogger import FileWriter
 from src.utils.CallbackRegister import CallbackRegistry
 from src.utils.ExelMethod import ExelMethod
 from src.Model import Model
@@ -124,7 +127,7 @@ class Controller:
 
             # Безопасное логирование: используем %r для потенциально None-значений
             self.logger.debug(
-                "Параметры для расчёта диаметра (%s): pressure=%.2f МПа, speed=%.2f м/с, "
+                "Параметры для расчёта диаметра (%s): pressure=%.3f МПа, speed=%.2f м/с, "
                 "gas_consumption=%r м³/ч, auto_speed=%s",
                 io_type, pressure, speed, gas_consumption, auto_speed
             )
@@ -244,28 +247,27 @@ class Controller:
         # 7. Обработка каждого файла
         # Обработка файлов
         total_regulators_found = 0
-        report = FileWriter(PIn, POt, bandwidth)
+        self.sel_regulator.show_info_message("Поиск подходящего регулятора запущен")
         for path_file in excel_files:
             if not path_file.strip():  # защита от пустых строк
                 continue
 
             try:
-                self.sel_regulator.show_info_message("Поиск подходящего регулятора запущен")
+
                 self.logger.info("Открываем Excel-файл: %s", path_file)
 
-                report.open_file()
 
                 workbook = openpyxl.load_workbook(os.path.normpath(path_file), read_only=True, data_only=True)
 
                 # --- Анализ одного файла ---
                 # Анализ файла
-                found:Dict[str,Dict[str,int]] = self.excel.conduct_analysis(workbook, PIn, POt, bandwidth,load_range,reporter=report)
+                found:Dict[str,Dict[str,int]] = self.excel.conduct_analysis(workbook, PIn, POt, bandwidth,load_range)
 
                 if len(found) == 0:
                     self.logger.warning("Точное совпадение не найдено в файле %s. Ищем ближайшие значения.", path_file)
                     finder = FoundCorValue(workbook, PIn, POt)
                     PIn_adj, POt_adj = finder()
-                    found = self.excel.conduct_analysis(workbook, PIn_adj, POt_adj, bandwidth,load_range,reporter=report)
+                    found = self.excel.conduct_analysis(workbook, PIn_adj, POt_adj, bandwidth,load_range)
 
 
                 total_regulators_found = len(found)
@@ -275,8 +277,7 @@ class Controller:
                 error_msg = f"Ошибка при обработке файла: {os.path.basename(path_file)}"
                 self.sel_regulator.show_error_message(error_msg)
                 self.logger.exception("Критическая ошибка при анализе файла %s: %s", path_file,e)
-            finally:
-                report.close_file()
+
 
         # 8. Финализация
         # Поиск завершен
@@ -350,7 +351,6 @@ class Controller:
             self.sel_regulator.show_error("Произошла системная ошибка при подборе схем")
 
         self.logger.info("Поиск схем завершен")
-
 
 if __name__ == "__main__":
 

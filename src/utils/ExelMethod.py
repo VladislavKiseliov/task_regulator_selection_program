@@ -157,7 +157,7 @@ class ExelMethod:
                                                   output_pressure: float,
                                                   traffic_capacity: float,
                                                   sheet,
-                                                  load_range:tuple[float],reporter = None) -> Dict[str, Dict[str, int]]:
+                                                  load_range:tuple[float]) -> Dict[str, Dict[str, int]]:
         """Функция search_several_controller_table_algorithm, принимает
         данные поиска и лист с таблицей формата: несколько устройств
         на одном листе. И добавляет девайс в найденные если
@@ -166,10 +166,6 @@ class ExelMethod:
         # Put your sheet in the loader
         regulators_found = {}
         i_row = 0
-        if reporter:
-            reporter.write_log(f"--- Начало анализа листа: {sheet.title} ---")
-            reporter.write_log(
-                f"Целевые параметры: Pвх={inlet_pressure}, Pвых={output_pressure}, Требуемый Q={traffic_capacity}")
         try:
             for row in sheet.iter_rows(values_only=True):
 
@@ -204,20 +200,11 @@ class ExelMethod:
                                                     # Проверяем, найденная пропускная способность больше ли необходимой, и является ли регулятор для сжиженного газа если необходимо
                                                     if (int(row_scr[i_cell]) * load_range[0]) <= bandwidth <= (
                                                             int(row_scr[i_cell]) * load_range[1]):
-                                                        status_str = "ПОДХОДИТ"
                                                         regulators_found[name_device] = {"saddle": saddle,
                                                                                          "currentBandwidth": row_scr[
                                                                                              i_cell],
                                                                                          "bandwidth": bandwidth}
-                                                    else:
-                                                        status_str = "НЕ ПОДХОДИТ"
-                                                    reporter.write_log(
-                                                        f"Проверка модели: {name_device} | "
-                                                        f"Макс.ПрСп: {row_scr[i_cell]} м3/ч | "
-                                                        f"Диапазон [{(load_range[0] * 100)}%-{(load_range[1] * 100)}%]: {(int(row_scr[i_cell]) * load_range[0]):.1f} - {int(row_scr[i_cell]) * load_range[1]:.1f} м3/ч | "
-                                                        f"Факт. загрузка: {load_percent:.1f}% | "
-                                                        f"ИТОГ: {status_str}"
-                                                    )
+
 
 
 
@@ -233,21 +220,11 @@ class ExelMethod:
                                                 # Проверка условий загрузки
                                                     if (int(row_scr[i_cell]) * load_range[0]) <= bandwidth <= (
                                                             int(row_scr[i_cell]) * load_range[1]):
-                                                        status_str = "ПОДХОДИТ"
                                                         regulators_found[name_device] = {"saddle": saddle,
                                                                                          "currentBandwidth": row_scr[
                                                                                              i_cell],
                                                                                          "bandwidth": bandwidth}
-                                                    else:
-                                                        status_str = "НЕ ПОДХОДИТ"
 
-                                                    reporter.write_log(
-                                                        f"Проверка модели: {name_device} | "
-                                                        f"Макс.ПрСп: {row_scr[i_cell]} м3/ч | "
-                                                        f"Диапазон [{(load_range[0] * 100)}%-{(load_range[1] * 100)}%]: {(int(row_scr[i_cell]) * load_range[0]):.1f} - {int(row_scr[i_cell]) * load_range[1]:.1f} м3/ч | "
-                                                        f"Факт. загрузка: {((bandwidth*100)/row_scr[i_cell]):.1f}% | "
-                                                        f"ИТОГ: {status_str}"
-                                                    )
 
                                     row_scr_i += 1
 
@@ -269,20 +246,11 @@ class ExelMethod:
                                                 if utils.is_int(row_scr[i_cell]):
                                                     if (int(row_scr[i_cell]) * load_range[0]) <= bandwidth <= (
                                                             int(row_scr[i_cell]) * load_range[1]):
-                                                        status_str = "ПОДХОДИТ"
                                                         regulators_found[name_device] = {"saddle": saddle,
                                                                                          "currentBandwidth": row_scr[
                                                                                              i_cell],
                                                                                          "bandwidth": bandwidth}
-                                                    else:
-                                                        status_str = "НЕ ПОДХОДИТ"
-                                                    reporter.write_log(
-                                                        f"Проверка модели: {name_device} | "
-                                                        f"Макс.ПрСп: {row_scr[i_cell]} м3/ч | "
-                                                        f"Диапазон [{(load_range[0] * 100)}%-{(load_range[1] * 100)}%]: {(int(row_scr[i_cell]) * load_range[0]):.1f} - {int(row_scr[i_cell]) * load_range[1]:.1f} м3/ч | "
-                                                        f"Факт. загрузка: {load_percent:.1f}% | "
-                                                        f"ИТОГ: {status_str}"
-                                                    )
+
 
                                         # Если ячейка входного давления НЕ является диапазоном
                                         else:
@@ -293,20 +261,11 @@ class ExelMethod:
                                                     # Если это значение больше или равно необходимого
                                                     if (int(row_scr[i_cell]) * load_range[0]) <= bandwidth <= (
                                                             int(row_scr[i_cell]) * load_range[1]):
-                                                        status_str = "ПОДХОДИТ"
                                                         regulators_found[name_device] = {"saddle": saddle,
                                                                                          "currentBandwidth": row_scr[
                                                                                              i_cell],
                                                                                          "bandwidth": bandwidth}
-                                                    else:
-                                                        status_str = "НЕ ПОДХОДИТ"
-                                                    reporter.write_log(
-                                                        f"Проверка модели: {name_device} | "
-                                                        f"Макс.ПрСп: {row_scr[i_cell]} м3/ч | "
-                                                        f"Диапазон [{(load_range[0] * 100)}%-{(load_range[1] * 100)}%]: {(int(row_scr[i_cell]) * load_range[0]):.1f} - {int(row_scr[i_cell]) * load_range[1]:.1f} м3/ч | "
-                                                        f"Факт. загрузка: {load_percent:.1f}% | "
-                                                        f"ИТОГ: {status_str}"
-                                                    )
+
 
                                     row_scr_i += 1
                 i_row += 1
@@ -315,7 +274,7 @@ class ExelMethod:
         # Результат поиска
         return regulators_found
 
-    def conduct_analysis(self, workbook, inlet_pressure, output_pressure, traffic_capacity, load_range,reporter=None) -> Dict[
+    def conduct_analysis(self, workbook, inlet_pressure, output_pressure, traffic_capacity, load_range) -> Dict[
         str, Dict[str, any]]:
         """
         Метод координирует анализ книги Excel по всем листам.
@@ -331,8 +290,7 @@ class ExelMethod:
             self.logger.error("Некорректные типы входных данных для анализа: %s, %s, %s",
                               inlet_pressure, output_pressure, traffic_capacity)
             raise ValueError("Параметры давления и расхода должны быть числами.")
-        if reporter:
-            reporter.write_log(f"СТАРТ АНАЛИЗА ФАЙЛА. Параметры: Pвх={inlet_pressure}, Pвых={output_pressure}, Q={traffic_capacity}")
+
         for sheet_name in workbook.sheetnames:
             try:
                 sheet = workbook[sheet_name]
@@ -342,11 +300,11 @@ class ExelMethod:
                 if c1_value is None or c1_value == "":
                     self.logger.debug("Лист '%s': формат 'один регулятор на лист'", sheet_name)
                     found = self.search_one_controller_table_algorithm(
-                        inlet_pressure, output_pressure, traffic_capacity, sheet, load_range,reporter)
+                        inlet_pressure, output_pressure, traffic_capacity, sheet, load_range)
                 else:
                     self.logger.debug("Лист '%s': формат 'несколько регуляторов на лист'", sheet_name)
                     found = self.search_several_controller_table_algorithm(
-                        inlet_pressure, output_pressure, traffic_capacity, sheet, load_range,reporter)
+                        inlet_pressure, output_pressure, traffic_capacity, sheet, load_range)
 
                 regulators_found.update(found)
 
@@ -356,25 +314,5 @@ class ExelMethod:
                 continue
 
         self.logger.info("Анализ завершен. Всего найдено моделей: %d", len(regulators_found))
-        if reporter:
-            self._write_final_summary(reporter, regulators_found, inlet_pressure, output_pressure, traffic_capacity)
         return regulators_found
-
-    def _write_final_summary(self, reporter, found, p_in, p_out, q):
-        """Внутренний метод для красивой таблицы в конце лога."""
-        reporter.write_log("=" * 60)
-        reporter.write_log("ИТОГОВАЯ СВОДКА ПОДОБРАННЫХ РЕГУЛЯТОРОВ")
-        reporter.write_log(f"Запрос: Pвх={p_in} МПа, Pвых={p_out} МПа, Расход={q} м3/ч")
-        reporter.write_log("-" * 60)
-
-        if not found:
-            reporter.write_log("РЕЗУЛЬТАТ: Подходящих моделей не обнаружено.")
-        else:
-            for name, data in found.items():
-                max_bw = data['currentBandwidth']
-                load = (q / max_bw) * 100
-                line = f"Модель: {name:<20} | Седло: {data.get('saddle', '-'):<5} | Загрузка: {load:>5.1f}%"
-                reporter.write_log(line)
-
-        reporter.write_log("=" * 60)
 

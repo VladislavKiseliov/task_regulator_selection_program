@@ -8,6 +8,8 @@ from imports import *
 from pathlib import Path
 import logging
 import src.utils.utils as utils
+from src.DropArea import DropArea
+from src.GUI.mainwindow import Ui_MainWindow
 
 from src.utils.CallbackRegister import CallbackRegistry
 
@@ -41,7 +43,7 @@ class SelRegulator:
         self.data_conf = {"Path":{}}
         self.status_animation = itertools.cycle(["В работе.", "В работе..", "В работе..."])
 
-        self.__conf_file_loader()
+
         utils.create_path_folder_for_save()
 
         # self.app = QtWidgets.QApplication(sys.argv)
@@ -473,32 +475,6 @@ class SelRegulator:
         self.drop_area = DropArea();
         self.ui.scrollArea_2.setWidget(self.drop_area)
 
-    def  __conf_file_loader(self) -> None:
-        """Загружаем json с конфигом, в котором находятся пути сохраённных xmlx файлов"""
-        try:
-            # Получение текущей директории
-            self.current_dir = os.getcwd()
-
-            # Сборка пути к папке
-            self.conf_file_name = "selRegulConf.json"
-            self.conf_file_path = os.path.join(self.current_dir, self.conf_file_name)
-
-            # Проверка существования папки и создание, если не существует
-            if not os.path.exists(self.conf_file_path):
-                with open(self.conf_file_path, 'w') as file:
-                    json.dump(self.data_conf, file)
-                    file.close()
-                return 0
-            else:
-                with open(self.conf_file_path, 'r') as file:
-                    self.data_conf = json.load(file)
-                    file.close()
-
-                for key,value in self.data_conf["Path"].items():
-                    self.file_path_list.append(value)
-        except:
-            pass
-
     def show_error_message(self, text_err:str) -> None:
         """Функция show_error_message выводит сообщение об ошибке с заданным текстом
         в виде диалогового окна."""
@@ -569,18 +545,6 @@ class SelRegulator:
             self.drop_area.add_file(file_path)
 
 
-    def __saved_conf_search(self) -> None:
-        """Функция __saved_conf_search, сохраняет конфигурацию
-        поиска устройства для отдельного запуска"""
-        
-        # self.saved_conf_self_file_name_var = self.ui.self_file_name_var.isChecked()
-        # self.saved_conf_input_name_file = self.ui.input_name_file.text()
-        # self.saved_conf_left_to_right = self.ui.left_to_right.isChecked()
-        # self.saved_conf_PZK_position_sensor = self.ui.PZK_position_sensor.isChecked()
-        self.saved_conf_Regulator_for_liquefied_gas = False
-
-        self.saved_conf_minimum_load = int(self.ui.min_lebel_loading_range.text())
-        self.saved_conf_maximum_load =  int(self.ui.max_lebel_loading_range.text())
 
     def open_file(self):
         """Функция open_file, привязана
@@ -640,16 +604,6 @@ class SelRegulator:
         about_window.exec_()
 
     def draw_window(self) -> None:
-        """
-        Функция для отображения графического пользовательского интерфейса (GUI). 
-        Она создает окно с помощью библиотеки TkinterDnD, в котором пользователь 
-        может перетаскивать и откладывать файлы формата docx, которые отображаются 
-        в списке. Пользователь может ввести цифровой маркер тега и нажать кнопку 
-        "Заменить", чтобы заменить кириллические символы в тегах. Также есть 
-        кнопка "Удалить" для удаления выбранных файлов из списка. Статус операции 
-        отображается в метке, а анимация показывает, что операция выполняется.
-        """
-
         self.MainWindow.show()
 
     def create_regulator_block(self, name, saddle, current_bw, required_bw) -> QtWidgets.QFrame:
@@ -971,24 +925,32 @@ class SelRegulator:
             found (bool): Флаг успешного поиска файла на диске.
         """
         try:
-            # Создаем красивый блок схемы
+            # 1. Создаем блок схемы
             scheme_block = self.create_scheme_block(regulator_name, scheme_name, file_path, found)
 
-            # Находим лайаут. Если там есть распорка (stretch), удаляем её перед добавлением,
-            # чтобы новые элементы всегда были сверху, либо просто добавляем в конец.
+            # 2. Получаем лайаут, куда будем вставлять
             layout = self.ui.ShemesLayout
 
-            # Добавляем блок в интерфейс
+            # --- ИСПРАВЛЕНИЕ ЛОГИКИ РАЗРЫВОВ ---
+
+            # Перед добавлением нового виджета, проверяем, есть ли в конце "распорка" (Stretch)
+            # В PyQt лайаут хранит элементы. Мы ищем последний индекс.
+            last_item_idx = layout.count() - 1
+
+            if last_item_idx >= 0:
+                last_item = layout.itemAt(last_item_idx)
+                # Если последний элемент — это распорка (QSpacerItem), удаляем её
+                if isinstance(last_item, QtWidgets.QSpacerItem):
+                    layout.removeItem(last_item)
+
+            # Добавляем наш блок схемы
             layout.addWidget(scheme_block)
 
-            # Чтобы блоки не разъезжались, всегда держим один stretch в самом конце
-            # (если он еще не добавлен)
-            if layout.count() > 0:
-                item = layout.itemAt(layout.count() - 1)
-                if not isinstance(item, QtWidgets.QSpacerItem):
-                    layout.addStretch()
+            # Добавляем распорку ПУСТОТЫ в самый конец.
+            # Она заберет на себя всё свободное место снизу и прижмет блоки друг к другу.
+            layout.addStretch(1)
 
-            self.log.debug(f"Блок схемы для {regulator_name} отрисован (found={found})")
+            self.log.debug(f"Блок схемы для {regulator_name} отрисован и прижат к верху.")
 
         except Exception as e:
-            self.log.error(f"Ошибка при отрисовке блока схемы для {regulator_name}: {e}", exc_info=True)
+            self.log.error(f"Ошибка при отрисовке блока схемы: {e}", exc_info=True)
