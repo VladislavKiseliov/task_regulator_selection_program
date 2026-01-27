@@ -1,5 +1,8 @@
+# -*- coding: utf-8 -*-
 import os
 from contextlib import contextmanager
+from pathlib import Path
+import sys
 
 def is_int(value) -> bool:
     """Функция is_int, принимает значение
@@ -32,6 +35,15 @@ def block_signals(widget):
     finally:
         widget.blockSignals(False)
 
+
+# Ensure project root is on sys.path so "imports.py" resolves when запуск из подкаталогов.
+_root = Path(__file__).resolve()
+for _ in range(4):
+    if (_root / "imports.py").exists():
+        break
+    _root = _root.parent
+if str(_root) not in sys.path:
+    sys.path.insert(0, str(_root))
 
 from imports import *
 

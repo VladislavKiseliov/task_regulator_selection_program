@@ -1,15 +1,22 @@
-from typing import Callable, Union, Dict, Any, List
-
-from PyQt5.QtWidgets import QFrame
-from pyexpat.errors import messages
-
-import src.utils.MathMethod as MathMethod
-from imports import *
+# -*- coding: utf-8 -*-
 from pathlib import Path
+import sys
+from typing import Dict, List
+
+# Ensure project root is on sys.path so "imports.py" resolves when запуск из подкаталогов.
+_root = Path(__file__).resolve()
+for _ in range(4):
+    if (_root / "imports.py").exists():
+        break
+    _root = _root.parent
+if str(_root) not in sys.path:
+    sys.path.insert(0, str(_root))
+
+from imports import *
 import logging
 import src.utils.utils as utils
 from src.DropArea import DropArea
-from src.GUI.mainwindow import Ui_MainWindow
+from GUI.mainwindow import Ui_MainWindow
 
 from src.utils.CallbackRegister import CallbackRegistry
 
@@ -57,6 +64,12 @@ class SelRegulator:
         self.ui.pushButton_flag_speed.setChecked(False)
 
         self.change_speed = False
+
+        # Подстройка вариантов "Обогрев" под тип изделия
+        self._ensure_heating_buttons()
+        self._fix_heating_texts()
+        self.ui.comboBox_product_type.currentTextChanged.connect(self._update_heating_options)
+        self._update_heating_options(self.ui.comboBox_product_type.currentText())
 
         try:
             # Удаляем строку с self.app!
@@ -179,12 +192,118 @@ class SelRegulator:
         """
         try:
             if self.ui.radioButton_heating_og.isChecked():
-                return "ОГ"
+                return "\u041e\u0413"  # ОГ
             elif self.ui.radioButton_heating_oe.isChecked():
-                return "ОЭ"
+                return "\u041e\u042d"  # ОЭ
+            elif getattr(self.ui, "radioButton_heating_a", None) and self.ui.radioButton_heating_a.isChecked():
+                return "\u0410"  # А
+            elif getattr(self.ui, "radioButton_heating_e", None) and self.ui.radioButton_heating_e.isChecked():
+                return "\u042d"  # Э
+            elif getattr(self.ui, "radioButton_heating_c", None) and self.ui.radioButton_heating_c.isChecked():
+                return "\u0426"  # Ц
+            elif getattr(self.ui, "radioButton_heating_i", None) and self.ui.radioButton_heating_i.isChecked():
+                return "\u0418"  # И
             else:
                 return "0"
 
+        except Exception as e:
+            self.ui.statusbar.showMessage(f"Ошибка: {str(e)}")
+
+    def _ensure_heating_buttons(self) -> None:
+        """
+        Гарантирует наличие кнопок А/Э/Ц/И даже если ui был пересобран без них.
+        """
+        try:
+            layout = getattr(self.ui, "horizontalLayout_heating", None)
+            group = getattr(self.ui, "buttonGroup_heating", None)
+            parent = getattr(self.ui, "groupBox_gas_equipment", None)
+            base_font = self.ui.radioButton_heating_og.font()
+
+            def _add_if_missing(obj_name: str, text: str):
+                if hasattr(self.ui, obj_name):
+                    return getattr(self.ui, obj_name)
+                if parent is None or layout is None:
+                    return None
+                btn = QtWidgets.QRadioButton(parent)
+                btn.setObjectName(obj_name)
+                btn.setText(text)
+                btn.setFont(base_font)
+                btn.setMinimumSize(QtCore.QSize(50, 0))
+                btn.setVisible(False)
+                if group is not None:
+                    group.addButton(btn)
+                # Вставляем перед "0", чтобы порядок был логичным
+                zero_btn = getattr(self.ui, "radioButton_heating_0", None)
+                if zero_btn is not None:
+                    idx = layout.indexOf(zero_btn)
+                    if idx >= 0:
+                        layout.insertWidget(idx, btn)
+                    else:
+                        layout.addWidget(btn)
+                else:
+                    layout.addWidget(btn)
+                setattr(self.ui, obj_name, btn)
+                return btn
+
+            _add_if_missing("radioButton_heating_a", "\u0410")  # А
+            _add_if_missing("radioButton_heating_e", "\u042d")  # Э
+            _add_if_missing("radioButton_heating_c", "\u0426")  # Ц
+            _add_if_missing("radioButton_heating_i", "\u0418")  # И
+        except Exception as e:
+            self.ui.statusbar.showMessage(f"Ошибка: {str(e)}")
+
+    def _fix_heating_texts(self) -> None:
+        """
+        Принудительно задаёт правильные надписи, чтобы пережить проблемы кодировки .ui.
+        """
+        try:
+            text_map = {
+                "radioButton_heating_og": "\u041e\u0413",  # ОГ
+                "radioButton_heating_oe": "\u041e\u042d",  # ОЭ
+                "radioButton_heating_a": "\u0410",        # А
+                "radioButton_heating_e": "\u042d",        # Э
+                "radioButton_heating_c": "\u0426",        # Ц
+                "radioButton_heating_i": "\u0418",        # И
+                "radioButton_heating_0": "0",
+            }
+            for name, text in text_map.items():
+                btn = getattr(self.ui, name, None)
+                if btn is not None:
+                    btn.setText(text)
+        except Exception as e:
+            self.ui.statusbar.showMessage(f"Ошибка: {str(e)}")
+
+    def _update_heating_options(self, product_type: str) -> None:
+        """
+        Переключает доступные варианты "Обогрев" в зависимости от типа изделия.
+        ГРПШ -> ОГ/ОЭ/0
+        ГРУ, ГРПБ -> А/Э/Ц/И/0
+        """
+        try:
+            is_grpsh = product_type.strip() == "\u0413\u0420\u041f\u0428"  # ГРПШ
+
+            # Базовые кнопки
+            self.ui.radioButton_heating_og.setVisible(is_grpsh)
+            self.ui.radioButton_heating_oe.setVisible(is_grpsh)
+
+            # Расширенные варианты
+            extra_buttons = [
+                getattr(self.ui, "radioButton_heating_a", None),
+                getattr(self.ui, "radioButton_heating_e", None),
+                getattr(self.ui, "radioButton_heating_c", None),
+                getattr(self.ui, "radioButton_heating_i", None),
+            ]
+            for btn in extra_buttons:
+                if btn is not None:
+                    btn.setVisible(not is_grpsh)
+
+            # Если текущий выбранный скрыт — переключаем на "0"
+            visible_buttons = [b for b in [self.ui.radioButton_heating_og,
+                                           self.ui.radioButton_heating_oe,
+                                           self.ui.radioButton_heating_0] + [b for b in extra_buttons if b]
+                              if b.isVisible()]
+            if visible_buttons and not any(b.isChecked() for b in visible_buttons):
+                self.ui.radioButton_heating_0.setChecked(True)
         except Exception as e:
             self.ui.statusbar.showMessage(f"Ошибка: {str(e)}")
 

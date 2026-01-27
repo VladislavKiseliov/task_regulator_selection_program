@@ -1,5 +1,18 @@
+# -*- coding: utf-8 -*-
 import json
 import os
+from pathlib import Path
+import sys
+
+# Ensure project root is on sys.path so "imports.py" resolves when запуск из подкаталогов.
+_root = Path(__file__).resolve()
+for _ in range(3):
+    if (_root / "imports.py").exists():
+        break
+    _root = _root.parent
+if str(_root) not in sys.path:
+    sys.path.insert(0, str(_root))
+
 from imports import *
 
 
