@@ -86,8 +86,23 @@ class SelRegulator:
         self.__connect_config();
         self.callback = callback_registry
     
-    def show_error(self,error:str):
-        self.ui.statusbar.showMessage(error)
+    def show_error(self, error: str):
+        self._set_status(error)
+
+    def _set_status(self, text: str, animate: bool = False) -> None:
+        """
+        Централизованное обновление статуса (статус-бар удалён).
+        """
+        self.status_text = text
+        try:
+            self.log.info("STATUS: %s", text)
+        except Exception:
+            pass
+        if text and "ошибка" in text.lower():
+            try:
+                self.show_error_message(text)
+            except Exception:
+                pass
 
     def __connect_config(self) -> None:
         """
@@ -163,7 +178,7 @@ class SelRegulator:
         try:
             return int(self.ui.spinBox_working_lines.value())
         except Exception as e:
-            self.ui.statusbar.showMessage(f"Ошибка: {str(e)}")
+            self._set_status(f"Ошибка: {str(e)}")
 
     def get_backup_lines(self):
         """
@@ -172,7 +187,7 @@ class SelRegulator:
         try:
             return int(self.ui.spinBox_reserve_lines.value())
         except Exception as e:
-            self.ui.statusbar.showMessage(f"Ошибка: {str(e)}")
+            self._set_status(f"Ошибка: {str(e)}")
 
     def get_removable_backup_line(self):
         """
@@ -207,7 +222,7 @@ class SelRegulator:
                 return "0"
 
         except Exception as e:
-            self.ui.statusbar.showMessage(f"Ошибка: {str(e)}")
+            self._set_status(f"Ошибка: {str(e)}")
 
     def _ensure_heating_buttons(self) -> None:
         """
@@ -250,7 +265,7 @@ class SelRegulator:
             _add_if_missing("radioButton_heating_c", "\u0426")  # Ц
             _add_if_missing("radioButton_heating_i", "\u0418")  # И
         except Exception as e:
-            self.ui.statusbar.showMessage(f"Ошибка: {str(e)}")
+            self._set_status(f"Ошибка: {str(e)}")
 
     def _fix_heating_texts(self) -> None:
         """
@@ -271,7 +286,7 @@ class SelRegulator:
                 if btn is not None:
                     btn.setText(text)
         except Exception as e:
-            self.ui.statusbar.showMessage(f"Ошибка: {str(e)}")
+            self._set_status(f"Ошибка: {str(e)}")
 
     def _update_heating_options(self, product_type: str) -> None:
         """
@@ -305,7 +320,7 @@ class SelRegulator:
             if visible_buttons and not any(b.isChecked() for b in visible_buttons):
                 self.ui.radioButton_heating_0.setChecked(True)
         except Exception as e:
-            self.ui.statusbar.showMessage(f"Ошибка: {str(e)}")
+            self._set_status(f"Ошибка: {str(e)}")
 
     def get_telemetry_type(self) -> str:
         """
@@ -320,7 +335,7 @@ class SelRegulator:
                 return "0"
 
         except Exception as e:
-            self.ui.statusbar.showMessage(f"Ошибка: {str(e)}")
+            self._set_status(f"Ошибка: {str(e)}")
 
     def get_climate_execution(self):
         """
@@ -339,7 +354,7 @@ class SelRegulator:
                 return "0"
 
         except Exception as e:
-            self.ui.statusbar.showMessage(f"Ошибка: {str(e)}")
+            self._set_status(f"Ошибка: {str(e)}")
 
     def get_number_of_gas_pipeline_outlets(self):
         """
@@ -348,7 +363,7 @@ class SelRegulator:
         try:
             return int(self.ui.spinBox_gas_outputs.value())
         except Exception as e:
-            self.ui.statusbar.showMessage(f"Ошибка: {str(e)}")
+            self._set_status(f"Ошибка: {str(e)}")
 
     def get_valve_diameter_calc(self,ioType:str)->int:
         """
@@ -440,16 +455,20 @@ class SelRegulator:
         try:
             return self.ui.comboBox_direction.currentText()
         except Exception as e:
-            self.ui.statusbar.showMessage(f"Ошибка: {str(e)}")
+            self._set_status(f"Ошибка: {str(e)}")
 
     def get_bandwidth(self) -> float:
         """
             Получить пропускную способность
         """
         try:
-            return float(self.ui.input_bandwidth.text().replace(",", '.'.replace(" ", '')))
+            text = self.ui.input_bandwidth.text().replace(",", ".").replace(" ", "").strip()
+            if not text:
+                return 0.0
+            return float(text)
         except Exception as e:
-            self.ui.statusbar.showMessage(f"Ошибка: {str(e)}")
+            self._set_status(f"Ошибка: неверный формат расхода ({e})")
+            return 0.0
 
     def get_pressure(self,ioType:str)->float:
         """
@@ -467,16 +486,18 @@ class SelRegulator:
             pressure_in = self.get_pressure("Input")
         """
         if ioType not in ("Input", "Output"):
-            self.ui.statusbar.showMessage("Ошибка: suffix должен быть 'Input' или 'Output'")
+            self._set_status("Ошибка: suffix должен быть 'Input' или 'Output'")
             return 0.0
 
         widget_name = f"input_Pressure_{ioType}"
         try:
             widget = getattr(self.ui, widget_name)
-            text = widget.text().replace(",", ".").replace(" ", "")
+            text = widget.text().replace(",", ".").replace(" ", "").strip()
+            if not text:
+                return 0.0
             return float(text)
         except Exception as e:
-            self.ui.statusbar.showMessage(f"Ошибка при чтении давления ({ioType}): {e}")
+            self._set_status(f"Ошибка: неверный формат давления ({ioType}): {e}")
             return 0.0
 
     def set_speed(self,ioType:str,gas_speed:float)->None:
@@ -633,20 +654,13 @@ class SelRegulator:
         саму себя через 500 миллисекунд для продолжения цикла работы.
         Если статус не содержит текст 'В работе', функция просто обновляет статус-бар."""
 
-        if "В работе" in self.status_text:
-            self.ui.statusbar.showMessage(self.status_text)
-            self.status_text = next(self.status_animation)
-            QTimer.singleShot(500, self.status_work_cycle)  # Вызываем себя через 500 мс
-        else:
-            pass
-            # self.ui.statusbar.showMessage(self.status_text)
+        self._set_status(self.status_text)
 
     def update_status_worck(self, status_text) -> None:
         """Функция update_status_worck, является обёрткой
         над функцией status_worck_cycle. Позволяя корректно 
         останавливать самовызов этой функции"""
-        self.status_text = status_text
-        self.status_work_cycle()
+        self._set_status(status_text, animate=False)
 
     def __open_file_dialog(self):
         """Функция __open_file_dialog, отвечает

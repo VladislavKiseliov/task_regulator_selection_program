@@ -2233,7 +2233,6 @@
     </item>
    </layout>
   </widget>
-  <widget class="QStatusBar" name="statusbar" />
   <widget class="QMenuBar" name="menubar">
    <property name="geometry">
     <rect>
