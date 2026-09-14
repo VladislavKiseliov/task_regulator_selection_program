@@ -8,10 +8,15 @@ build_packages = [
     "pathlib", "math", "datetime", "shutil"
 ]
 
-# 2. Исключения (убираем ошибки совместимости)
+# 2. Исключения (убираем ошибки совместимости и тяжёлые неиспользуемые
+#    библиотеки — pandas/numpy/scipy нужны только при разработке, в exe
+#    их не тянем, т.к. чтение Excel идёт openpyxl'ом)
 build_excludes = [
     "unittest", "test", "PyQt5.QtQml",
-    "PyQt5.QtQuick", "PyQt5.QtNetwork", "freeze-core"
+    "PyQt5.QtQuick", "PyQt5.QtNetwork", "freeze-core",
+    "pandas", "numpy", "scipy", "pyarrow",
+    "win32evtlog", "win32evtlogutil",
+    "sqlalchemy", "sqlite3",
 ]
 
 # 3. Список файлов для сборки
@@ -44,7 +49,7 @@ if sys.platform == "win32":
 
 setup(
     name="RegulatorSelector",
-    version="1.0",
+    version="1.1",
     description="Программа подбора регуляторов давления газа",
     options={"build_exe": build_exe_options},
     executables=[

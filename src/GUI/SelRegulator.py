@@ -17,6 +17,7 @@ import logging
 import src.utils.utils as utils
 from src.DropArea import DropArea
 from GUI.mainwindow import Ui_MainWindow
+from GUI import style as gui_style
 
 from src.utils.CallbackRegister import CallbackRegistry
 
@@ -56,6 +57,9 @@ class SelRegulator:
         self.MainWindow = QtWidgets.QMainWindow()
         self.ui = Ui_MainWindow()
         self.ui.setupUi(self.MainWindow)
+
+        # Применяем единую современную тему ко всему окну.
+        gui_style.apply_theme(self.MainWindow)
 
         self.speed_or_diametr = "diametr"
         self.ui.pushButton_flag_diametr.setCheckable(True)

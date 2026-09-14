@@ -35,7 +35,17 @@ class DropArea(QListWidget):
         super().__init__(parent)
         self.setAcceptDrops(True)
         self.setFont(QFont("Arial", 10))
-        self.setStyleSheet("QListWidget { background-color : lightgrey; border: 2px dashed black; }")
+        # Современная дроп-зона в единой теме приложения.
+        self.setStyleSheet(
+            "QListWidget {"
+            "  background-color : #ffffff;"
+            "  border : 2px dashed #aab6c4;"
+            "  border-radius : 8px;"
+            "  padding : 10px;"
+            "  color : #55606e;"
+            "}"
+            "QListWidget::item:selected { background-color : #dbe7f6; color : #1b4e7a; }"
+        )
 
         self.config_file = "app_config.json"
         self.file_paths = []  # Список для хранения абсолютных путей к файлам
@@ -151,6 +161,27 @@ class DropArea(QListWidget):
         """Добавляет строку с путем файла в визуальный список (виджет)."""
         item = QListWidgetItem(file_path)
         self.addItem(item)
+
+    def add_file(self, file_path: str):
+        """
+        Добавляет файл по пути (используется кнопкой «Открыть файл»).
+
+        Проверяет, что путь существует и расширение разрешено, избегает
+        дубликатов и сохраняет конфигурацию.
+        """
+        if not file_path:
+            return
+        abs_path = os.path.abspath(file_path)
+        if not os.path.isfile(abs_path):
+            return
+        if not self.is_allowed_file(abs_path):
+            return
+        if abs_path in self.file_paths:
+            return
+        self.file_paths.append(abs_path)
+        self.add_item(abs_path)
+        self.update_placeholder()
+        self.save_config()
 
     def remove_selected_file(self):
         """
